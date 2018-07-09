@@ -13,6 +13,10 @@ date: 2018-07-07 19:51:55
 ## 面向对象
 
 ## 常用类及数据结构
+### Object 
+1. ==和equals的区别
+
+### String
 ### StringBuilder
 ### StringBuffer
 ### AVL树
@@ -22,14 +26,16 @@ date: 2018-07-07 19:51:55
 
 ---
 ## 集合
-### 线程安全的集合
+### 线程*安全*的集合
 #### Vector
 
 #### HashTable
 
 #### StringBuffer
 
-### 线程不安全的集合
+### 线程*不安全*的集合
+#### HashSet
+
 #### LinkedList
 
 #### ArrayList
@@ -51,6 +57,14 @@ jdk1.8好像解决了这个问题,进行优化之后省去了重新计算hash值
 * 遍历的方法,取出keySet().iterator(),遍历iterator,即Map.entry,从entry中取key和value比较高效.
 
 ---
+## 一致性Hash算法
+参考地址:http://blog.csdn.net/cywosp/article/details/23397179
+一致性hash算法提出了在动态变化的Cache环境中，判定哈希算法好坏的四个定义:
+1. 平衡性
+2. 单调性
+3. 分散性
+4. 负载
+
 ## 异常 
 
 ---
@@ -92,6 +106,10 @@ jdk1.8好像解决了这个问题,进行优化之后省去了重新计算hash值
 ---
 ## FP
 
+
+# 并发
+## 处理高并发
+* 举例子,代码实现
 
 # 多线程 +++
 ## 线程
@@ -221,6 +239,11 @@ ThreadPoolExecutor提供了动态调整线程池容量大小的方法：setCoreP
 ## J.U.C
 
 ## Atomic
+
+## CAS算法
+Compare and Swap，即比较再交换。
+参考地址:https://www.jianshu.com/p/21be831e851e
+
 
 ## fork/join 
 

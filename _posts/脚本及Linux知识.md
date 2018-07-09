@@ -13,6 +13,11 @@ date: 2018-07-07 20:49:09
  <!-- more -->
 
 # centos常用命令
+## awk命令
+### 命令查找日志
+* 查找访问日志如 tcp 0 0 127.0.0.1:8652 127.0.0.1:40192 TIME_WAIT格式文件,IP最多的前五个IP
+awk '{print $5}' apache.log|cut -d:-f1|sort|uniq -c|sort -nr|head -n 5
+
 ## 查看进程
 `ps -ef|grep tomcat`
 
