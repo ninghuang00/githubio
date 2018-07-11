@@ -254,6 +254,22 @@ Compare and Swap，即比较再交换。
 {% asset_link 设计模式.md 设计模式%}
 
 # Servlet容器 ++
+* 什么是servlet容器
+{% asset_img servlet容器和webserver.png servlet容器和webserver %}
+用户想web server请求的只能是静态页面,如果web server想要返回动态页面,就需要servlet来产生.所谓的servlet其实就是Java程序,servlet容器就是装这些java程序的,负责servlet程序的创建,执行和销毁,因此javax.servlet中的Servlet接口定义了是哪个方法:
+    1. init()
+    在Servlet生命周期初始化阶段调用,传递一个实现了javax.servlet.ServletConfig接口的对象以获取web application中的初始化参数
+    2. service()
+    接收一个请求都会调用一次Service()方法,每个请求的处理都在独立的线程中进行,Service()方法判断请求的类型并转发给相应的Servlet进行处理
+    3. destory()
+* webserver和Servlet容器处理一个请求的过程
+    1. Web服务器接收到HTTP请求
+    2. Web服务器将请求转发给servlet容器
+    3. 如果容器中不存在所需的servlet，容器就会检索servlet，并将其加载到容器的地址空间中
+    4. 容器调用servlet的init()方法对servlet进行初始化（该方法只会在servlet第一次被载入时调用）
+    5. 容器调用servlet的service()方法来处理HTTP请求，即，读取请求中的数据，创建一个响应。servlet会被保留在容器的地址空间中，继续处理其他的HTTP请求
+    6. Web服务器将动态生成的结果返回到正确的地址。
+
 ## tomcat
 ### tomcat Servlet
 1. 是不是线程安全的:
