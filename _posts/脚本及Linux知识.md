@@ -13,6 +13,27 @@ date: 2018-07-07 20:49:09
  <!-- more -->
 
 # centos常用命令
+## 强制杀死进程
+`kill -s 9 PID`
+
+## grep命令
+### 获取本机内网ip
+`ifconfig eth0|grep "inet addr"|awk '{print $2}'|awk -F : '{print $2}'`
+参考地址:https://www.cnblogs.com/kerrycode/archive/2015/06/16/4581030.html
+### 常用参数
+```java
+-d skip 忽略子目录
+-l pattern files 查询多文件时只列出匹配的文件名
+-v 显示不包括匹配文本的所有行
+-c 只输出匹配行的计数
+-i 不区分大小写(只适用于单字符)
+-h 查询多文件时不显示文件名
+-n 显示匹配行及行号
+-s 不显示不存在或无匹配文本的错误信息
+-v 显示不包括匹配文件的所有行
+
+```
+
 ## awk命令
 ### 命令查找日志
 * 查找访问日志如 tcp 0 0 127.0.0.1:8652 127.0.0.1:40192 TIME_WAIT格式文件,IP最多的前五个IP
@@ -208,3 +229,24 @@ export CATALINA_HOME=/usr/local/tomcat
 
 6. 在/etc/rc.d/rc.local中加入`/usr/local/tomcat/bin/startup.sh`
 
+# shell脚本
+## shell加法
+{% asset_img shell加法.png shell加法%}
+## source命令
+{% asset_img source命令.png source命令%}
+## 替换文本文件
+{% asset_img 替换文本文件.png 替换文本文件%}
+## 换行符格式
+{% asset_img 换行格式.png 换行格式%}
+## 管道
+那么，一种思路就是把你tail输出的东西再做一次包装处理，这个很符合linux管道处理的思想。以高亮Log中的ERROR为例，你可以这样：
+`tail -f xxx.log | perl -pe 's/(ERROR)/\e[1;31m$1\e[0m/g'`
+其中，xxx.log是你要跟踪的文件。这里假设了你的Linux的PATH中有perl。perl在这里干的事情，
+就是通过命令行的方式进行动态的替换ERROR字符串的操作，替换过程中，主要使用了Linux的console_codes的语法结构。
+（具体关于console_codes的细节，可以通过man console_codes进行了解）这里，\e主要进行转移说明。
+
+
+# 正则表达式
+## 匹配数字
+1. 匹配1~1000
+`^([1-9][0-9]{0,4}|1000)$`
