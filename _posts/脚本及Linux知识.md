@@ -11,8 +11,80 @@ date: 2018-07-07 20:49:09
 ---
  这是摘要
  <!-- more -->
+ 
+ # shell脚本
+ ## wget使用
+ 1. 从有数字规律的网址抓取网页并保存在当前目录？假设网址为 http://test/0.xml，其中这个数字可以递增到100。(网易笔试题)
+ ```shell
+for((i=0;i<100;++i));
+do
+wget http://test/$i.xml; 
+done
+```
+ 
+ ## shell加法
+ {% asset_img shell加法.png shell加法%}
+ ## source命令
+ {% asset_img source命令.png source命令%}
+ ## 替换文本文件
+ {% asset_img 替换文本文件.png 替换文本文件%}
+ ## 换行符格式
+ {% asset_img 换行格式.png 换行格式%}
+ ## 管道
+ 那么，一种思路就是把你tail输出的东西再做一次包装处理，这个很符合linux管道处理的思想。以高亮Log中的ERROR为例，你可以这样：
+ `tail -f xxx.log | perl -pe 's/(ERROR)/\e[1;31m$1\e[0m/g'`
+ 其中，xxx.log是你要跟踪的文件。这里假设了你的Linux的PATH中有perl。perl在这里干的事情，
+ 就是通过命令行的方式进行动态的替换ERROR字符串的操作，替换过程中，主要使用了Linux的console_codes的语法结构。
+ （具体关于console_codes的细节，可以通过man console_codes进行了解）这里，\e主要进行转移说明。
+ 
+ 
+ # 正则表达式
+ ## 匹配数字
+ 1. 匹配1~1000
+ `^([1-9][0-9]{0,4}|1000)$`
+ 
 
 # centos常用命令
+## 查找文件
+### whereis：
+whereis命令用来定位指令的二进制程序、源代码文件和man手册页等相关文件的路径。
+whereis命令只能用于程序名的搜索，而且只搜索二进制文件（参数-b）、man说明文件（参数-m）和源代码文件（参数-s）。如果省略参数，则返回所有信息。
+
+### locate：
+locate命令和slocate命令都用来查找文件或目录。
+locate命令其实是find -name的另一种写法，但是要比后者快得多，原因在于它不搜索具体目录，而是搜索一个数据库/var/lib/locatedb，这个数据库中含有本地所有文件信息。Linux系统自动创建这个数据库，并且每天自动更新一次，所以使用locate命令查不到最新变动过的文件。为了避免这种情况，可以在使用locate之前，先使用updatedb命令，手动更新数据库。
+
+### which：
+which命令用于查找并显示给定命令的绝对路径，环境变量PATH中保存了查找命令时需要遍历的目录。which指令会在环境变量$PATH设置的目录里查找符合条件的文件。也就是说，使用which命令，就可以看到某个系统命令是否存在，以及执行的到底是哪一个位置的命令。
+
+### type：
+type命令用来显示指定命令的类型，判断给出的指令是内部指令还是外部指令。
+命令类型：
+```
+alias：别名。
+keyword：关键字，Shell保留字。
+function：函数，Shell函数。
+builtin：内建命令，Shell内建命令。
+file：文件，磁盘文件，外部命令。
+unfound：没有找到。
+-t：输出“file”、“alias”或者“builtin”，分别表示给定的指令为“外部指令”、“命令别名”或者“内部指令”；
+-p：如果给出的指令为外部指令，则显示其绝对路径；
+-a：在环境变量“PATH”指定的路径中，显示给定指令的信息，包括命令别名。
+[root@localhost ~]# type date date is /bin/date [root@localhost ~]# type mysql mysql is /usr/bin/mysql
+因为显示的是路径，可以理解为找到了这个文件（个人理解）。
+```
+### find：
+find命令用来在指定目录下查找文件。任何位于参数之前的字符串都将被视为欲查找的目录名。如果使用该命令时，不设置任何参数，则find命令将在当前目录下查找子目录与文件。并且将查找到的子目录和文件全部进行显示。
+
+## 查看内存使用
+`free -mh`
+
+## 查看硬盘使用
+`df -h`
+
+## 查看文件夹大小
+`du -h`
+
 ## 强制杀死进程
 `kill -s 9 PID`
 
@@ -229,24 +301,3 @@ export CATALINA_HOME=/usr/local/tomcat
 
 6. 在/etc/rc.d/rc.local中加入`/usr/local/tomcat/bin/startup.sh`
 
-# shell脚本
-## shell加法
-{% asset_img shell加法.png shell加法%}
-## source命令
-{% asset_img source命令.png source命令%}
-## 替换文本文件
-{% asset_img 替换文本文件.png 替换文本文件%}
-## 换行符格式
-{% asset_img 换行格式.png 换行格式%}
-## 管道
-那么，一种思路就是把你tail输出的东西再做一次包装处理，这个很符合linux管道处理的思想。以高亮Log中的ERROR为例，你可以这样：
-`tail -f xxx.log | perl -pe 's/(ERROR)/\e[1;31m$1\e[0m/g'`
-其中，xxx.log是你要跟踪的文件。这里假设了你的Linux的PATH中有perl。perl在这里干的事情，
-就是通过命令行的方式进行动态的替换ERROR字符串的操作，替换过程中，主要使用了Linux的console_codes的语法结构。
-（具体关于console_codes的细节，可以通过man console_codes进行了解）这里，\e主要进行转移说明。
-
-
-# 正则表达式
-## 匹配数字
-1. 匹配1~1000
-`^([1-9][0-9]{0,4}|1000)$`

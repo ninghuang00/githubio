@@ -13,9 +13,25 @@ date: 2018-07-07 19:51:55
 ## 面向对象
 
 ## 常用类及数据结构
+1. Java常用的数据结构中，请描述Vector, ArrayList, LinkedList的不同场景下的性能差别
+    1. 不考虑同步的情况下
+        1. 随机访问数据,ArrayList对象要远优于LinkedList对象；
+        2. 进行插入或者删除操作，LinkedList对象要远优于ArrayList对象；
+    2. 考虑同步的时候只能使用Vector,而Vector和ArrayList相比增加了同步操作,性能上比不上ArrayList
 ### Object 
 1. ==和equals的区别
-
+在Object类中equals()方法其实等效于==,比较的是两个对象的内存地址是否相等
+```java
+public boolean equals(Object obj) {
+    return (this == obj);
+}
+```
+如果重写equals()方法,那么它和==就不一定等效了
+2. hashCode()和equals()
+    1. hashCode的存在主要是用于查找的快捷性，如Hashtable，HashMap等，hashCode是用来在散列存储结构中确定对象的存储地址的；
+    2. 如果两个对象相同，就是适用于equals(java.lang.Object) 方法，那么这两个对象的hashCode一定要相同；
+    3. 如果对象的equals方法被重写，那么对象的hashCode也尽量重写，并且产生hashCode使用的对象，一定要和equals方法中使用的一致，否则就会违反上面提到的第2点；
+    4. 两个对象的hashCode相同，并不一定表示两个对象就相同，也就是不一定适用于equals(java.lang.Object) 方法，只能够说明这两个对象在散列存储结构中，如Hashtable，他们“存放在同一个篮子里”。
 ### String
 ### StringBuilder
 ### StringBuffer
@@ -27,8 +43,34 @@ date: 2018-07-07 19:51:55
 ---
 ## 集合
 ### 线程*安全*的集合
-#### Vector
-
+#### Vector(*)
+1. 基于数组实现,默认初始化10个
+2. 同步方法,Vector的方法和ArrayList基本一样,就是一些方法都加上了synchronize关键字
+```java
+/**
+ * Appends the specified element to the end of this Vector.
+ */
+public synchronized boolean add(E e) {
+    modCount++;
+    ensureCapacityHelper(elementCount + 1);
+    elementData[elementCount++] = e;
+    return true;
+}
+```
+3. 扩容原理
+```java
+private void grow(int minCapacity) {
+    // overflow-conscious code
+    int oldCapacity = elementData.length;
+    int newCapacity = oldCapacity + ((capacityIncrement > 0) ?
+                                     capacityIncrement : oldCapacity);
+    if (newCapacity - minCapacity < 0)
+        newCapacity = minCapacity;
+    if (newCapacity - MAX_ARRAY_SIZE > 0)
+        newCapacity = hugeCapacity(minCapacity);
+    elementData = Arrays.copyOf(elementData, newCapacity);
+}
+```
 #### HashTable
 
 #### StringBuffer
@@ -36,16 +78,67 @@ date: 2018-07-07 19:51:55
 ### 线程*不安全*的集合
 #### HashSet
 
-#### LinkedList
+#### LinkedList(*)
+1. 基于双向链表实现
+```java
+private static class Node<E> {
+    E item;
+    Node<E> next;
+    Node<E> prev;
 
-#### ArrayList
-`elementData[size++] = e;`
-	从上面的源码中可以看出,ArrayList中增加一个元素的时候会分层两步进行:
+    Node(Node<E> prev, E element, Node<E> next) {
+        this.item = element;
+        this.next = next;
+        this.prev = prev;
+    }
+}
+```
+2. 增加一个元素
+```java
+void linkLast(E e) {
+    final Node<E> l = last;
+    final Node<E> newNode = new Node<>(l, e, null);
+    last = newNode;
+    if (l == null)
+        first = newNode;
+    else
+        l.next = newNode;
+    size++;
+    modCount++;
+}
+```
+
+#### ArrayList(*)
+1. 基于数组实现,默认初始容量10
+```java
+/**
+ * Appends the specified element to the end of this list.
+ */
+public boolean add(E e) {
+    ensureCapacityInternal(size + 1);  // Increments modCount!!
+    elementData[size++] = e;
+    return true;
+}
+```
+从上面的源码中可以看出,ArrayList中增加一个元素的时候会分层两步进行:
 1. 先在elementData[size++]的地方存放元素,
 2. 然后再增大size.
 	因此如果是多线程进行访问的话,有可能两个线程在同一个位置存放了元素.
-
-#### HashMap
+3. 扩容原理
+```java
+private void grow(int minCapacity) {
+    // overflow-conscious code
+    int oldCapacity = elementData.length;
+    int newCapacity = oldCapacity + (oldCapacity >> 1);
+    if (newCapacity - minCapacity < 0)
+        newCapacity = minCapacity;
+    if (newCapacity - MAX_ARRAY_SIZE > 0)
+        newCapacity = hugeCapacity(minCapacity);
+    // minCapacity is usually close to size, so this is a win:
+    elementData = Arrays.copyOf(elementData, newCapacity);
+}
+```
+#### HashMap(*)
 参考地址:http://www.importnew.com/22011.html
 HashMap的底层实现原理
 * HashMap的结构:是一个Node<K,V>[]的数组,Node实现了Map.Entry,初始容量16(代码中是`1<<4`),最大是2^30,当检查到插入数据时容量超出`capacity*loadFactor`,就要增大Hash表的尺寸,
@@ -56,7 +149,13 @@ jdk1.8好像解决了这个问题,进行优化之后省去了重新计算hash值
 * 支持NULL键和NULL值,而且null值的key总是放在数组第一个位置
 * 遍历的方法,取出keySet().iterator(),遍历iterator,即Map.entry,从entry中取key和value比较高效.
 
----
+
+## 哈希算法
+基于哈希算法在信息安全中主要应用在
+1. 文件校验
+2. 数字签名
+3. 鉴权协议
+
 ## 一致性Hash算法
 参考地址:http://blog.csdn.net/cywosp/article/details/23397179
 一致性hash算法提出了在动态变化的Cache环境中，判定哈希算法好坏的四个定义:
@@ -171,6 +270,16 @@ java中的多线程是一种抢占机制而不是分时机制,抢占机制指的
     唤醒在当前对象等待池中等待的第一个线程/所有线程。notify()/notifyAll()也必须拥有相同对象锁，否则也会抛出IllegalMonitorStateException异常。   
     7. Synchronizing Block
     Synchronized Block/方法控制对类成员变量的访问；Java中的每一个对象都有唯一的一个内置的锁，每个Synchronized Block/方法只有持有调用该方法被锁定对象的锁才可以访问，否则所属线程阻塞；机锁具有独占性、一旦被一个Thread持有，其他的Thread就不能再拥有（不能访问其他同步方法），方法一旦执行，就独占该锁，直到从该方法返回时才将锁释放，此后被阻塞的线程方能获得该锁，重新进入可执行状态。
+
+## 线程进程之间的访问
+1. 临界区(Critical Section)
+适合一个进程内的多线程访问公共区域或代码段时使用。
+2. 互斥量(Mutex)
+适合不同进程内多线程访问公共区域或代码段时使用，与临界区相似。
+3. 事件(Event)
+通过线程间触发事件实现同步互斥。
+4. 信号量(Semaphore)
+与临界区和互斥量不同，可以实现多个线程同时访问公共区域数据，原理与操作系统中PV操作类似，先设置一个访问公共区域的线程最大连接数，每有一个线程访问共享区资源数就减一，直到资源数小于等于零
 
 ## 线程池
 ThreadPoolExecutor
