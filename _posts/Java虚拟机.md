@@ -19,9 +19,13 @@ date: 2018-07-08 16:12:32
 ### 保护模式
 
 ## 类加载过程
-### class编译
-### 加载 
-### 执行原理过程
+{% asset_link JVM类加载机制.md JVM类加载机制%}
+1. 加载
+2. 验证
+3. 准备
+4. 解析
+5. 初始化
+
 
 ---
 ## 内存管理
@@ -52,10 +56,18 @@ date: 2018-07-08 16:12:32
 
 
 ## 垃圾回收(GC)
+{% asset_img java虚拟机运行时数据区.png java虚拟机运行时数据区%}
+1. 程序计数器：线程私有。是一块较小的内存，是当前线程所执行的字节码的行号指示器。是Java虚拟机规范中唯一没有规定OOM（OutOfMemoryError）的区域。
+2. Java栈：线程私有。生命周期和线程相同。是Java方法执行的内存模型。执行每个方法都会创建一个栈帧，用于存储局部变量和操作数（对象引用）。局部变量所需要的内存空间大小在编译期间完成分配。所以栈帧的大小不会改变。存在两种异常情况：若线程请求深度大于栈的深度，抛StackOverflowError。若栈在动态扩展时无法请求足够内存，抛OOM。
+3. Java堆：所有线程共享。虚拟机启动时创建。存放对象实力和数组。所占内存最大。分为新生代（Young区），老年代（Old区）。新生代分Eden区，Servior区。Servior区又分为From space区和To Space区。Eden区和Servior区的内存比为8:1。 当扩展内存大于可用内存，抛OOM。
+4. 方法区：所有线程共享。用于存储已被虚拟机加载的类信息、常量、静态变量等数据。又称为非堆（Non–Heap）。方法区又称“永久代”。GC很少在这个区域进行，但不代表不会回收。这个区域回收目标主要是针对常量池的回收和对类型的卸载。当内存申请大于实际可用内存，抛OOM。
+5. 本地方法栈：线程私有。与Java栈类似，但是不是为Java方法（字节码）服务，而是为本地非Java方法服务。也会抛StackOverflowError和OOM。
+
 ### 堆内存结构
+{% asset_img 堆空间.jpg 堆空间%}
 JVM堆内存分为2块：Permanent Space 和 Heap Space
 * Permanent 即 持久代（Permanent Generation），主要存放的是Java类定义信息，与垃圾收集器要收集的Java对象关系不大。
-* Heap = { Old + NEW = {Eden, from, to} }，Old 即 年老代（Old Generation），New 即 年轻代（Young Generation）。年老代和年轻代的划分对垃圾收集影响比较大。
+* Heap = { Old + NEW(Eden, from, to) }，Old 即 年老代（Old Generation），New 即 年轻代（Young Generation）。年老代和年轻代的划分对垃圾收集影响比较大。
 	1. 年轻代
 	所有新生成的对象首先都是放在年轻代。年轻代的目标就是尽可能快速的收集掉那些生命周期短的对象。年轻代一般分3个区，1个Eden区，2个Survivor区（from 和 to）。
 	大部分对象在Eden区中生成。当Eden区满时，还存活的对象将被复制到Survivor区（两个中的一个），当一个Survivor区满时，此区的存活对象将被复制到另外一个Survivor区，当另一个Survivor区也满了的时候，从前一个Survivor区复制过来的并且此时还存活的对象，将可能被复制到年老代。
@@ -70,12 +82,25 @@ JVM堆内存分为2块：Permanent Space 和 Heap Space
 
 
 ### 什么时候回收
-JVM卸载类的判断条件
+触发GC的条件,JVM卸载类的判断条件:
+根据Eden区和From Space区的内存大小来决定。当内存大小不足时，则会启动GC线程并停止应用线程。
+1. Minor GC
+当Eden区满时，触发
+2. Full GC
+	1. 调用System.gc时，系统建议执行Full GC，但是不必然执行
+	2. 老年代空间不足
+	3. 方法去空间不足
+	4. 通过Minor GC后进入老年代的平均大小大于老年代的可用内存
+	5. 由Eden区、From Space区向To Space区复制时，对象大小大于To Space可用内存，则把该对象转存到老年代，且老年代的可用内存小于该对象大小
+
+### 回收对象 
+通过可达性分析法无法搜索到的对象和可以搜索到的对象。对于搜索不到的方法进行标记。
 1. 该类的所有实例都已经被回收,也就是java堆中不存在该类的任何实例
 2. 加载该类的ClassLoader已经被回收
 3. 该类对应的java.lang.Class对象没有在任何地方呗引用,无法通过反射在任何地方访问该类的方法
 
 ### 怎么回收
+对于可以搜索到的对象进行复制操作，对于搜索不到的对象，调用finalize()方法进行释放。当GC线程启动时，会通过可达性分析法把Eden区和From Space区的存活对象复制到To Space区，然后把Eden Space和From Space区的对象释放掉。当GC轮训扫描To Space区一定次数后，把依然存活的对象复制到老年代，然后释放To Space区的对象。
 
 ### 引用的分类
 1. 强引用

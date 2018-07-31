@@ -121,17 +121,14 @@ Java中的AIO((Asynchronous IO))是这种模型,线程发起io后可以直接干
 1. 文件是怎么在磁盘上存储的
 
 # Jdk8特性 +++
+{% asset_link JDK8新特性.md jdk8新特性 %}
 
----
 ## lambda表达式
 
----
 ## 函数式编程
 
----
 ## stream
 
----
 ## FP
 
 
