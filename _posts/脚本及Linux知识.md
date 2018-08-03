@@ -74,19 +74,58 @@ unfound：没有找到。
 因为显示的是路径，可以理解为找到了这个文件（个人理解）。
 ```
 ### find：
+参考地址:https://www.cnblogs.com/ay-a/p/8017419.html
 find命令用来在指定目录下查找文件。任何位于参数之前的字符串都将被视为欲查找的目录名。如果使用该命令时，不设置任何参数，则find命令将在当前目录下查找子目录与文件。并且将查找到的子目录和文件全部进行显示。
-
+`find -name "dxt-core" -type d`
+**find基本用法**
+```java
+find 如不加任何参数，表示查找当前路径下的所有文件和目录
+find  -print    将结果打印到标准输出
+find /data/log   指定路劲查找
+find   /   -name  "abc.txt"   在系统中查找 abc.txt 如果执行完毕没有找到，则说明系统中不存在该文件
+find 还支持正则表达式查找
+find /data/logs -mame "*.log"  -type f -printf    查找符合指定字符串的文件
+find . -name "[0-9]" -type f   查找以数字开头的文件
+find / -mtime -1 |head  查找系统内最近24小时修改过的文件
+find / -mmin  -15|head   查找系统内最近15 分钟修改过的文件
+find 使用 type 选项可以查找特定的文件类型，常见类型如下
+　　b 块设备文件
+　　d 目录
+　　c 字符设备文件
+　　p 管道文件
+　　l 符号链接文件
+　　f 普通文件
+find  . -type d  查找当前路径中的所有目录
+find  . -type f  查找当前路径中的所有文件
+find  . -type l   查找当前路径中的所有符号链接文件
+```
 ## 查看内存使用
 `free -mh`
 
 ## 查看硬盘使用
+可以查看一级文件夹大小、使用比例、档案系统及其挂入点，但对文件却无能为力
 `df -h`
 
 ## 查看文件夹大小
+可以查看文件及文件夹的大小
 `du -h`
+`du -h --max-depth 1 bin/Mdroid`
 
 ## 强制杀死进程
 `kill -s 9 PID`
+
+## 修改文件权限
+可执行文件
+`chmod 755 filename`
+```java
+sudo chmod -（代表类型）×××（所有者）×××（组用户）×××（其他用户）
+rwx-rwx-rwx
+sudo chmod 600 ××× （只有所有者有读和写的权限）
+sudo chmod 644 ××× （所有者有读和写的权限，组用户只有读的权限）
+sudo chmod 700 ××× （只有所有者有读和写以及执行的权限）
+sudo chmod 666 ××× （每个人都有读和写的权限）
+sudo chmod 777 ××× （每个人都有读和写以及执行的权限）
+```
 
 ## grep命令
 ### 获取本机内网ip
