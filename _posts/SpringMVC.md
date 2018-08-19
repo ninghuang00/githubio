@@ -16,12 +16,85 @@ date: 2018-08-07 23:35:40
 
 
 ## spring框架的基本原理
->基本原理其实就是通过反射(反射的原理)解析类及其类的各种信息，包括构造器、方法及其参数，属性。然后将其封装成bean定义信息类、constructor信息类、method信息类、property信息类，最终放在一个map里，也就是所谓的container，池等等，其实就是个map。。汗。。。。当你写好配置文件，启动项目后，框架会先按照你的配置文件找到那个要scan的包(一般是哪些包?)，然后解析包里面的所有类，找到所有含有@bean，@service等注解的类，利用反射解析它们，包括解析构造器，方法，属性等等，然后封装成各种信息类放到一个map里。每当你需要一个bean的时候，框架就会从container找是不是有这个类的定义啊？如果找到则通过构造器new出来（这就是控制反转，不用你new,框架帮你new），再在这个类找是不是有要注入的属性或者方法，比如标有@autowired的属性，如果有则还是到container找对应的解析类，new出对象，并通过之前解析出来的信息类找到setter方法，然后用该方法注入对象（这就是依赖注入）。如果其中有一个类container里没找到，则抛出异常，比如常见的spring无法找到该类定义，无法wire的异常。还有就是嵌套bean则用了一下递归，container会放到servletcontext里面，每次reQuest从servletcontext找这个container即可，不用多次解析类定义。如果bean的scope是singleton，则会重用这个bean不再重新创建，将这个bean放到一个map里，每次用都先从这个map里面找。如果scope是session，则该bean会放到session里面。仅此而已，没必要花更多精力。
+>基本原理其实就是通过反射(反射的原理)解析类及其类的各种信息，包括构造器、方法及其参数，属性。然后将其封装成bean定义信息类、constructor信息类、method信息类、property信息类，最终放在一个map里，也就是所谓的container，池等等，其实就是个map。。汗。。。。当你写好配置文件，启动项目后，框架会先按照你的配置文件找到那个要scan的包(一般是哪些包?)，然后解析包里面的所有类，找到所有含有@bean，@service等注解的类，利用反射解析它们，包括解析构造器，方法，属性等等，然后封装成各种信息类放到一个map里。**每当你需要一个bean的时候，框架就会从container找是不是有这个类的定义啊？如果找到则通过构造器new出来（这就是控制反转，不用你new,框架帮你new）**，再在这个类找是不是有要注入的属性或者方法，**比如标有@autowired的属性，如果有则还是到container找对应的解析类，new出对象，并通过之前解析出来的信息类找到setter方法，然后用该方法注入对象（这就是依赖注入）**。如果其中有一个类container里没找到，则抛出异常，比如常见的spring无法找到该类定义，无法wire的异常。还有就是嵌套bean则用了一下递归，container会放到servletcontext里面，每次reQuest从servletcontext找这个container即可，不用多次解析类定义。如果bean的scope是singleton，则会重用这个bean不再重新创建，将这个bean放到一个map里，每次用都先从这个map里面找。如果scope是session，则该bean会放到session里面。仅此而已，没必要花更多精力。
+
+### bean工厂
+```java
+public class BeanFactory {
+       private Map<String, Object> beanMap = new HashMap<String, Object>();
+       /**
+       * bean工厂的初始化.
+       * @param xml xml配置文件
+       */
+       public void init(String xml) {
+              try {
+                     //读取指定的配置文件
+                     SAXReader reader = new SAXReader();
+                     ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+                     //从class目录下获取指定的xml文件
+                     InputStream ins = classLoader.getResourceAsStream(xml);
+                     Document doc = reader.read(ins);
+                     Element root = doc.getRootElement();  
+                     Element foo;
+                    
+                     //遍历bean
+                     for (Iterator i = root.elementIterator("bean"); i.hasNext();) {  
+                            foo = (Element) i.next();
+                            //获取bean的属性id和class
+                            Attribute id = foo.attribute("id");  
+                            Attribute cls = foo.attribute("class");
+                           
+                            //利用Java反射机制，通过class的名称获取Class对象
+                            Class bean = Class.forName(cls.getText());
+                           
+                            //获取对应class的信息
+                            java.beans.BeanInfo info = java.beans.Introspector.getBeanInfo(bean);
+                            //获取其属性描述
+                            java.beans.PropertyDescriptor pd[] = info.getPropertyDescriptors();
+                            //设置值的方法
+                            Method mSet = null;
+                            //创建一个对象
+                            Object obj = bean.newInstance();
+                           
+                            //遍历该bean的property属性
+                            for (Iterator ite = foo.elementIterator("property"); ite.hasNext();) {  
+                                   Element foo2 = (Element) ite.next();
+                                   //获取该property的name属性
+                                   Attribute name = foo2.attribute("name");
+                                   String value = null;
+                                  
+                                   //获取该property的子元素value的值
+                                   for(Iterator ite1 = foo2.elementIterator("value"); ite1.hasNext();) {
+                                          Element node = (Element) ite1.next();
+                                          value = node.getText();
+                                          break;
+                                   }
+                                  
+                                   for (int k = 0; k < pd.length; k++) {
+                                          if (pd[k].getName().equalsIgnoreCase(name.getText())) {
+                                                 mSet = pd[k].getWriteMethod();
+                                                 //利用Java的反射机制调用对象的某个set方法，并将值设置进去
+                                                 mSet.invoke(obj, value);
+                                          }
+                                   }
+                            }
+                           
+                            //将对象放入beanMap中，其中key为id值，value为对象
+                            beanMap.put(id.getText(), obj);
+                     }
+              } catch (Exception e) {
+                     System.out.println(e.toString());
+              }
+       }
+      
+       //other codes
+}
+```
 
 ## 依赖注入()
-
+就是通过反射bean的setter方法,set成员bean的过程
 ## 控制反转(IOC)
-
+就是通过配置文件+反射生成bean
 ## 切面编程(AOP)
 参考网址:	https://www.liaoxuefeng.com/article/0013738774263173c42eae58864423698dd40556af23bb5000
 ### 通知(Advice)

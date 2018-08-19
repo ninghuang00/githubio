@@ -60,11 +60,18 @@ Java内存模型（Java Memory Model ,JMM）就是一种符合内存模型规范
 
 
 ## 垃圾回收(GC)
+分为堆(heap)和非堆(non-heap)
+简单说,堆就是给开发人员使用的代码可及的存放类实例和数组的内存区域;非堆就是除了堆之外的留给JVM自己使用的内存区域.
+### 方法区的变动
+1. (JDK1.8)移除了永久带,类元信息被放到metaSpace(本地化的内存?),一定程度上解决原来运行时加载大量类信息而引起的Full GC的问题,如反射,动态代理
+2. 将常量池(JDK1.7中就移了)和静态变量放到了java堆中
+
+### 运行时数据区
 {% asset_img java虚拟机运行时数据区.png java虚拟机运行时数据区%}
 1. 程序计数器：线程私有。是一块较小的内存，是当前线程所执行的字节码的行号指示器。是Java虚拟机规范中唯一没有规定OOM（OutOfMemoryError）的区域。
 2. Java栈：线程私有。生命周期和线程相同。是Java方法执行的内存模型。执行每个方法都会创建一个栈帧，用于存储局部变量和操作数（对象引用）。局部变量所需要的内存空间大小在编译期间完成分配。所以栈帧的大小不会改变。存在两种异常情况：若线程请求深度大于栈的深度，抛StackOverflowError。若栈在动态扩展时无法请求足够内存，抛OOM。
 3. Java堆：所有线程共享。虚拟机启动时创建。存放对象实力和数组。所占内存最大。分为新生代（Young区），老年代（Old区）。新生代分Eden区，Servior区。Servior区又分为From space区和To Space区。Eden区和Servior区的内存比为8:1。 当扩展内存大于可用内存，抛OOM。
-4. 方法区：所有线程共享。用于存储已被虚拟机加载的类信息、常量、静态变量等数据。又称为非堆（Non–Heap）。方法区又称“永久代”。GC很少在这个区域进行，但不代表不会回收。这个区域回收目标主要是针对常量池的回收和对类型的卸载。当内存申请大于实际可用内存，抛OOM。
+4. 方法区：所有线程共享。用于存储已被虚拟机加载的类信息、常量、静态变量等数据。又称为非堆（Non–Heap）。方法区又称“永久代”(JDK1.8中已经移除)。GC很少在这个区域进行，但不代表不会回收。这个区域回收目标主要是针对常量池的回收和对类型的卸载。当内存申请大于实际可用内存，抛OOM。
 5. 本地方法栈：线程私有。与Java栈类似，但是不是为Java方法（字节码）服务，而是为本地非Java方法服务。也会抛StackOverflowError和OOM。
 
 ### 堆内存结构
@@ -152,96 +159,8 @@ JVM堆内存分为2块：Permanent Space 和 Heap Space
 	单线程收集器,垃圾回收时必须暂停其他所有的工作线程
 2. ParNew收集器
 
+### 垃圾回收器
 
-## 线程安全 
-### volatile的使用(有两种语义)
-1. 能够保证修饰的变量对所有线程的可见性,当一条线程修改了了这个变量,其他线程可以马上得知.线程A修改了普通变量的值之后需要先回写到主内存之后,新的变量值才能被线程B读取到.但是并不能保证基于volatile变量的运算在并发下是安全的.
-	使用volatile进行安全的并发运算的规则
-	1. 运算结果不依赖变量的当前值,或者确保只有单一线程修改变量的值
-	2. 变量不需要与其他状态变量共同参与不变约束
-	比如多线程的累加是不安全的,因为累加不是原子操作;
-	比如布尔值的判断可以是安全的,多个线程判断一个flag是true还是false是可以线程安全的.
-2. 禁止指令重排序优化,普通变量不能保证普通的赋值操作和代码中的顺序是一致的.
-	比如说线程a进行初始化工作,初始化完之后将初始化完成的标志置为true,线程b中根据初始化完成标志开始其他工作,如果线程a,b并发,这个时候就有可能出错,因为指令重排序优化的关系,线程a中的初始化标志的指令可能会提前执行,
-
-### 线程安全的实现方法
-1. 互斥同步(阻塞同步)
-互斥同步对性能最大的影响就是对阻塞的实现,挂起和恢复线程的操作需要切换到内核态中完成
-	1. synchronized
-	关键是要分清楚是给类加锁还是给对象实例加锁
-	2. java.util.concurrent.ReentrantLock(注意锁的声明要放在需要同步的方法的外面)
-	和synchronized基本用法类似,使用lock()和unlock()方法配合try/finally语句块来完成,但是有以下三个特色:
-		1. 等待可中断
-		2. 可实现公平锁
-		3. 锁可以绑定多个条件
-2. 非阻塞同步
-不断重试
-3. 无同步方案
-	1. 可重入代码
-	可以在代码执行的任何时刻中断去执行其他代码(包括递归调用自己),并且在回来的时候原来的程序不会出现任何错误
-	2. 线程本地存储
-	将共享数据的代码保证在同一个线程中完成
-
-### 锁 
-1. 可重入锁
-在JAVA中，内置锁都是可重入的，也就是说，如果某个线程试图获取一个已经由它自己持有的锁时，那么这个请求会立刻成功，并且会将这个锁的计数值加1，而当线程退出同步代码块时，计数器将会递减，当计数值等于0时，锁释放。
-2. 不可重入锁
-不可重入锁,同一个线程再次请求已经获取过一次的锁时会造成死锁
-
-#### ReentrantLock和synchronized
-1. 锁的实现:
-ReentrantLock是JDK实现的,synchronized是依赖于JVM实现的
-2. 性能的区别:
-JDK1.6之后(synchronized引入了偏向锁,轻量级锁(自旋锁)之后)synchronized优化的与ReentrantLock性能差不多,在两种方法都可以使用的情况下官方建议使用synchronized,都是试图在用户态就将加锁问题解决,避免进入内核态
-3. 功能的区别:
-synchronized的使用比较简洁,由编译器保证加锁和施放锁,而ReentrantLock需要手工声明加锁和施放锁,但是ReentrantLock在锁的细粒度和灵活性方面更强
-	1. ReentrantLock可以指定公平锁和非公平锁,synchronized只能是非公平锁
-	2. ReentrantLock提供了一个Condition类来实现按照满足条件分组唤醒线程,而synchronized只能是随机唤醒一个线程,要么全部唤醒
-	3. ReentrantLock提供了一个可以中断等待锁的机制,通过lock.lockInterruptibly()来实现这个机制
-
-#### 锁优化
-1. 自旋锁和自适应自旋锁
-就是当后一个线程请求锁的时候,不要一请求不到就马上挂起,而是等待一下(前提是物理机器有一个以上的处理器),但不放弃处理器的执行时间,看看持有锁的线程是否会很快释放锁,为了让线程等待,只需要让线程执行一个忙循环(自旋)
-2. 锁消除(虚拟机优化) 
-虚拟机即时编译器在运行的时候会对一些代码上要求同步但是实际上不会发生数据共享竞争的锁进行消除,根据逃逸分析的数据支持,如果堆上的数据不会逃逸出去从而被其他线程访问到,就可以把他们当做是栈上的数据对待,认为他们是线程私有的,同步加锁自然无需进行,比如说StringBuilder.append()方法.
-3. 锁粗化
-就是一串连续的零碎操作都对同一个对象加锁,那么就会将加锁同步的范围扩大
-4. 轻量级锁
-5. 偏向锁
-
-### 线程安全是相对的
-(深入理解Java虚拟机P390)
-比如说Vector是一个线程安全的集合容器,因为它的add(),get(),size(),remove()方法都是被synchronized修饰过的,但是并不意味着调用这些方法就永远不需要额外的同步手段了,一下代码就有可能会出现ArrayIndexOutOfBoundsException.
-```java
-public class VectorDemo {
-    private static Vector<Integer> vector = new Vector();
-    public static void main(String[] args) {
-        while (true) {
-            for (int i = 0; i<10;i++) {
-                vector.add(i);
-            }
-            Thread removeTask = new Thread(new Runnable() {
-                public void run() {
-                    for(int i = 0;i < 10; i ++) {
-                        vector.remove(i);
-                    }
-                }
-            });
-            Thread printTask = new Thread(new Runnable() {
-                public void run() {
-                    for(int i = 0;i < 10; i ++) {
-                        System.out.println(vector.get(i));
-                    }
-                }
-            });
-            removeTask.start();
-            printTask.start();
-            //防止线程过多
-            while (Thread.activeCount() > 20) ;
-        }
-    }
-}
-```
 
 ## JVM性能调优的大致步骤
 参考地址:https://blog.csdn.net/rickyit/article/details/53895060
@@ -263,10 +182,6 @@ public class VectorDemo {
 	因为年老代的并发收集器使用标记、清除算法，所以不会对堆进行压缩。当收集器回收时，他会把相邻的空间进行合并，这样可以分配给较大的对象。但是，当堆空间较小时，运行一段时间以后，就会出现“碎片”，如果并发收集器找不到足够的空间，那么并发收集器将会停止，然后使用传统的标记、清除方式进行回收。如果出现“碎片”，可能需要进行如下配置：
 		-XX:+UseCMSCompactAtFullCollection ：使用并发收集器时，开启对年老代的压缩。
 		-XX:CMSFullGCsBeforeCompaction=0 ：上面配置开启的情况下，这里设置多少次Full GC后，对年老代进行压缩
-
-
-
-
 
 * 回收器选择
 JVM给了三种选择：*串行收集器*、*并行收集器*、*并发收集器* ，但是串行收集器只适用于小数据量的情况，所以这里的选择主要针对并行收集器和并发收集器。默认情况下，JDK5.0以前都是使用串行收集器，如果想使用其他收集器需要在启动时加入相应参数。JDK5.0以后，JVM会根据当前系统配置进行判断。
@@ -314,4 +229,93 @@ JVM给了三种选择：*串行收集器*、*并行收集器*、*并发收集器
 -XX:MaxTenuringThreshold=0 ：
 设置垃圾最大年龄。如果设置为0的话，则年轻代对象不经过Survivor区，直接进入年老代 。对于年老代比较多的应用，可以提高效率。如果将此值设置为一个较大值，则年轻代对象会在Survivor区进行多次复制，这样可以增加对象再年轻代的存活时间 ，增加在年轻代即被回收的概论。
 ```
+
+
+## 逃逸分析
+参考地址:http://www.hollischuang.com/archives/2398
+类实例和数组不一定都是分配在堆上了
+
+### 概念
+逃逸分析的基本行为就是分析对象动态作用域：当一个对象在方法中被定义后，它可能被外部方法所引用，例如作为调用参数传递到其他地方中，称为方法逃逸。
+```java
+public static StringBuffer craeteStringBuffer(String s1, String s2) {
+    StringBuffer sb = new StringBuffer();
+    sb.append(s1);
+    sb.append(s2);
+    return sb;
+}
+```
+StringBuffer sb是一个方法内部变量，上述代码中直接将sb返回，这样这个StringBuffer有可能被其他方法所改变，这样它的作用域就不只是在方法内部，虽然它是一个局部变量，称其逃逸到了方法外部。甚至还有可能被外部线程访问到，譬如赋值给类变量或可以在其他线程中访问的实例变量，称为线程逃逸。
+使用逃逸分析，编译器可以对代码做如下优化：
+1. 同步省略。如果一个对象被发现只能从一个线程被访问到，那么对于这个对象的操作可以不考虑同步。
+2. 将堆分配转化为栈分配。如果一个对象在子程序中被分配，要使指向该对象的指针永远不会逃逸，对象可能是栈分配的候选，而不是堆分配。
+3. 分离对象或标量替换。有的对象可能不需要作为一个连续的内存结构存在也可以被访问到，那么对象的部分（或全部）可以不存储在内存，而是存储在CPU寄存器中。
+`-XX:+DoEscapeAnalysis ： 表示开启逃逸分析 -XX:-DoEscapeAnalysis ： 表示关闭逃逸分析 从jdk 1.7开始已经默认开始逃逸分析，如需关闭，需要指定-XX:-DoEscapeAnalysis`
+
+### 实验
+看以下代码:
+```java
+public static void main(String[] args) {
+    long a1 = System.currentTimeMillis();
+    for (int i = 0; i < 1000000; i++) {
+        alloc();
+    }
+    // 查看执行时间
+    long a2 = System.currentTimeMillis();
+    System.out.println("cost " + (a2 - a1) + " ms");
+    // 为了方便查看堆内存中对象个数，线程sleep
+    try {
+        Thread.sleep(100000);
+    } catch (InterruptedException e1) {
+        e1.printStackTrace();
+    }
+}
+
+private static void alloc() {
+    User user = new User();
+}
+
+static class User {
+
+}
+```
+1. 关闭JIT编译器逃逸分析
+`-Xmx4G -Xms4G -XX:-DoEscapeAnalysis -XX:+PrintGCDetails -XX:+HeapDumpOnOutOfMemoryError `
+2. 然后在终端中查看堆中的对象数量:100万个
+```java
+➜  ~ jps
+2809 StackAllocTest
+2810 Jps
+➜  ~ jmap -histo 2809
+
+ num     #instances         #bytes  class name
+----------------------------------------------
+   1:           524       87282184  [I
+   2:       1000000       16000000  StackAllocTest$User
+   3:          6806        2093136  [B
+   4:          8006        1320872  [C
+   5:          4188         100512  java.lang.String
+   6:           581          66304  java.lang.Class
+```
+3. 打开逃逸分析,只有8万多
+`-Xmx4G -Xms4G -XX:+DoEscapeAnalysis -XX:+PrintGCDetails -XX:+HeapDumpOnOutOfMemoryError `
+```java 
+➜  ~ jps
+709
+2858 Launcher
+2859 StackAllocTest
+2860 Jps
+➜  ~ jmap -histo 2859
+
+ num     #instances         #bytes  class name
+----------------------------------------------
+   1:           524      101944280  [I
+   2:          6806        2093136  [B
+   3:         83619        1337904  StackAllocTest$User
+   4:          8006        1320872  [C
+   5:          4188         100512  java.lang.String
+   6:           581          66304  java.lang.Class
+```
+
+
 

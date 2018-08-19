@@ -5,6 +5,7 @@ categories:
 tags:
   - 线程
   - 进程
+  - 线程安全
 date: 2018-07-23 21:46:03
 ---
  这是摘要
@@ -192,6 +193,72 @@ public void run() {
 ```
     9. setDaemon()
     设置成守护线程或者用户线程,守护线程和用户线程的区别在于：守护线程依赖于创建它的线程，而用户线程则不依赖。
+
+## 线程安全 
+### volatile的使用(有两种语义)
+1. 能够保证修饰的变量对所有线程的可见性,当一条线程修改了了这个变量,其他线程可以马上得知.线程A修改了普通变量的值之后需要先回写到主内存之后,新的变量值才能被线程B读取到.但是并不能保证基于volatile变量的运算在并发下是安全的.
+    使用volatile进行安全的并发运算的规则
+    1. 运算结果不依赖变量的当前值,或者确保只有单一线程修改变量的值
+    2. 变量不需要与其他状态变量共同参与不变约束
+    比如多线程的累加是不安全的,因为累加不是原子操作;
+    比如布尔值的判断可以是安全的,多个线程判断一个flag是true还是false是可以线程安全的.
+2. 禁止指令重排序优化,普通变量不能保证普通的赋值操作和代码中的顺序是一致的.
+    比如说线程a进行初始化工作,初始化完之后将初始化完成的标志置为true,线程b中根据初始化完成标志开始其他工作,
+    如果线程a,b并发,这个时候就有可能出错,因为指令重排序优化的关系,线程a中的初始化标志的指令可能会提前执行,
+
+
+### 线程安全的实现方法
+1. 互斥同步(阻塞同步)
+互斥同步对性能最大的影响就是对阻塞的实现,挂起和恢复线程的操作需要切换到内核态中完成
+    1. synchronized
+    关键是要分清楚是给类加锁还是给对象实例加锁
+    2. java.util.concurrent.ReentrantLock(注意锁的声明要放在需要同步的方法的外面)
+    和synchronized基本用法类似,使用lock()和unlock()方法配合try/finally语句块来完成,但是有以下三个特色:
+        1. 等待可中断
+        2. 可实现公平锁
+        3. 锁可以绑定多个条件
+2. 非阻塞同步
+不断重试
+3. 无同步方案
+    1. 可重入代码
+    可以在代码执行的任何时刻中断去执行其他代码(包括递归调用自己),并且在回来的时候原来的程序不会出现任何错误
+    2. 线程本地存储
+    将共享数据的代码保证在同一个线程中完成
+
+
+### 线程安全是相对的
+(深入理解Java虚拟机P390)
+比如说Vector是一个线程安全的集合容器,因为它的add(),get(),size(),remove()方法都是被synchronized修饰过的,但是并不意味着调用这些方法就永远不需要额外的同步手段了,一下代码就有可能会出现ArrayIndexOutOfBoundsException.
+```java
+public class VectorDemo {
+    private static Vector<Integer> vector = new Vector();
+    public static void main(String[] args) {
+        while (true) {
+            for (int i = 0; i<10;i++) {
+                vector.add(i);
+            }
+            Thread removeTask = new Thread(new Runnable() {
+                public void run() {
+                    for(int i = 0;i < 10; i ++) {
+                        vector.remove(i);
+                    }
+                }
+            });
+            Thread printTask = new Thread(new Runnable() {
+                public void run() {
+                    for(int i = 0;i < 10; i ++) {
+                        System.out.println(vector.get(i));
+                    }
+                }
+            });
+            removeTask.start();
+            printTask.start();
+            //防止线程过多
+            while (Thread.activeCount() > 20) ;
+        }
+    }
+}
+```
 
 
 ## 线程进程之间的访问
