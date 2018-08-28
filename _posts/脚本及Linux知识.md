@@ -5,44 +5,42 @@ categories:
 tags:
   - Linux 
   - shell
-  - centos 
-  - ubuntu
 date: 2018-07-07 20:49:09
 ---
  这是摘要
  <!-- more -->
  
- # shell脚本
- ## wget使用
- 1. 从有数字规律的网址抓取网页并保存在当前目录？假设网址为 http://test/0.xml，其中这个数字可以递增到100。(网易笔试题)
- ```shell
+# shell脚本
+## wget使用
+1. 从有数字规律的网址抓取网页并保存在当前目录？假设网址为 http://test/0.xml，其中这个数字可以递增到100。(网易笔试题)
+ ```
 for((i=0;i<100;++i));
 do
 wget http://test/$i.xml; 
 done
 ```
  
- ## shell加法
- {% asset_img shell加法.png shell加法%}
- ## source命令
- {% asset_img source命令.png source命令%}
- ## 替换文本文件
- {% asset_img 替换文本文件.png 替换文本文件%}
- ## 换行符格式
- {% asset_img 换行格式.png 换行格式%}
- ## 管道
- 那么，一种思路就是把你tail输出的东西再做一次包装处理，这个很符合linux管道处理的思想。以高亮Log中的ERROR为例，你可以这样：
- `tail -f xxx.log | perl -pe 's/(ERROR)/\e[1;31m$1\e[0m/g'`
- 其中，xxx.log是你要跟踪的文件。这里假设了你的Linux的PATH中有perl。perl在这里干的事情，
- 就是通过命令行的方式进行动态的替换ERROR字符串的操作，替换过程中，主要使用了Linux的console_codes的语法结构。
- （具体关于console_codes的细节，可以通过man console_codes进行了解）这里，\e主要进行转移说明。
- 
- 
- # 正则表达式
- ## 匹配数字
- 1. 匹配1~1000
- `^([1-9][0-9]{0,4}|1000)$`
- 
+## shell加法
+{% asset_img shell加法.png shell加法%}
+## source命令
+{% asset_img source命令.png source命令%}
+## 替换文本文件
+{% asset_img 替换文本文件.png 替换文本文件%}
+## 换行符格式
+{% asset_img 换行格式.png 换行格式%}
+## 管道
+那么，一种思路就是把你tail输出的东西再做一次包装处理，这个很符合linux管道处理的思想。以高亮Log中的ERROR为例，你可以这样：
+`tail -f xxx.log | perl -pe 's/(ERROR)/\e[1;31m$1\e[0m/g'`
+其中，xxx.log是你要跟踪的文件。这里假设了你的Linux的PATH中有perl。perl在这里干的事情，
+就是通过命令行的方式进行动态的替换ERROR字符串的操作，替换过程中，主要使用了Linux的console_codes的语法结构。
+（具体关于console_codes的细节，可以通过man console_codes进行了解）这里，\e主要进行转移说明。
+
+
+# 正则表达式
+## 匹配数字
+1. 匹配`1~1000`
+`^([1-9][0-9]{0,4}|1000)$`
+
 
 # centos常用命令
 ## 查找文件
