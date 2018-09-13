@@ -1,7 +1,7 @@
 ---
 title: 脚本及Linux知识
 categories:
-  - 笔记
+  - 操作系统
 tags:
   - Linux 
   - shell
