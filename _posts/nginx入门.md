@@ -12,7 +12,7 @@ date: 2018-09-09 17:06:42
  <!-- more -->
 
 ## 配置详解
-{% link_post nginx配置详解 %}
+{% post_link nginx配置详解 %}
 
 
 ## 反向代理
