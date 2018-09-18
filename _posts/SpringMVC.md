@@ -207,13 +207,15 @@ public class AnnotationTest {
 绑定请求和Controller中方法的参数
 3. `@PathVariable`
 请求URI中的模板变量部分到处理器功能处理方法的方法参数上的绑定,比如
+
 ```java
 @RequestMapping(value="/get/{bookId}")
 public String getBookById(@PathVariable String bookId,Model model){
   model.addAttribute("bookId", bookId);
   return "book";
 }
-``` 
+```
+
 4. `@RequestMapping`
 请求路径映射
 RequestMapping注解有六个属性，下面我们把她分成三类进行说明（下面有相应示例）。
