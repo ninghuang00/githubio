@@ -11,6 +11,7 @@ date: 2018-08-07 23:35:40
 ---
 开发自己的SpringMVC
 参考地址:https://mp.weixin.qq.com/s/Fo3ZN64qm7e2bWEKEIfBFA
+参考地址:https://github.com/CFMystery/bfmvc/blob/master/bfmvc/src/main/java/cc/cleverfan/web/DispatherServlet.java
  <!-- more -->
 
 
@@ -349,15 +350,40 @@ ISOLATIOM_SERIALIZABLE:完全服从ACID的隔离级别，确保阻止脏读，�
   1. 使用
   实现`HandlerInterceptor`接口,创建类继承`WebMvcConfigurerAdapter`并重写`addInterceptors()`方法,添加拦截器实例就行了
   2. 应用
-
-  2. 注意点:
+```java
+public class AuthorityInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        String id = request.getParameter("id");
+        if (StringUtils.equals(id, "2")) {
+            logger.info("request pass");
+            return true;
+        }
+        logger.info("request intercepted");
+        return false;
+    }
+}
+```
+```java
+@Configuration
+public class WebMvcConfigurer extends WebMvcConfigurationSupport {
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        // 拦截器按照顺序执行,不止One，还有Two，Three
+        registry.addInterceptor(new AuthorityInterceptor()).addPathPatterns("/job/delete");
+        super.addInterceptors(registry);
+    }
+}
+```
+  3. 注意点:
     1. 基于反射实现
     1. 其中`WebMvcConfigurerAdapter`已经过时,使用`WebMvcConfigurationSupport`代替,但是据说会影响到`WebMvcConfiguration`自动配置,访问不到静态资源
-    2. 拦截可以在handle之前,之后,以及在整个请求结束之后(即dispatcherServlet渲染对应视图之后),细粒度可以具体到方法
+    2. 拦截可以在handle之前,之后,以及在整个请求结束之后(即dispatcherServlet渲染对应视图之后),细粒度可以根据`@RequestMapping`具体到方法,
     3. 拦截器只能拦截经过dispatcherServlet转发的请求
 2. 过滤器(Filter)
   1. 使用
-
+    1. 实现Filter接口,添加注解`@WebFilter(urlPatterns = "/*")`
+    2. 在启动类添加注解`@ServletComponentScan(basePackages = "com.hn.filter")`
   2. 应用
     1. 比如过拦截掉我们不需要的接口请求
     2. 修改请求（request）和响应（response）内容

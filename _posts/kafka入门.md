@@ -4,6 +4,7 @@ categories:
   - 开源框架
 tags:
   - kafka
+  - 消息中间件
 date: 2018-08-26 09:34:24
 ---
  这是摘要
@@ -44,3 +45,37 @@ kafka的消息是不断追加到文件,这个特性充分利用了磁盘的顺�
 
 5. 数据压缩
 Kafka还支持对消息集合进行压缩，Producer可以通过GZIP或Snappy格式对消息集合进行压缩压缩的好处就是减少传输的数据量，减轻对网络传输的压力Producer压缩之后，在Consumer需进行解压，虽然增加了CPU的工作，但在对大数据处理上，瓶颈在网络上而不是CPU，所以这个成本很值得
+
+
+## docker部署kafka
+1. 先部署zookeeper
+`docker run -d --name zookeeper -p 2181:2181 -t wurstmeister/zookeeper`
+2. 部署kafka
+`docker run -d --name kafka --link zookeeper -e KAFKA_ADVERTISED_HOST_NAME=120.79.202.146 -e KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 -e KAFKA_HEAP_OPTS="-Xmx50M -Xms50M" -e KAFKA_ADVERTISED_PORT=9092 -e KAFKA_BROKER_ID=1 -e LOG_CLEANER_DEDUPE_BUFFER_SIZE="20M" -p 9092:9092 -v $PWD/temp:/temp wurstmeister/kafka`
+
+3. 测试消息收发
+	1. `docker exec -it ${CONTAINER ID} /bin/bash`
+	2. `cd /opt/kafka_2.12-0.10.2.0/`
+	3. 创建主题
+	`bin/kafka-topics.sh --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --topic mykafka  `
+	4. 运行生产者
+	`bin/kafka-console-producer.sh --broker-list localhost:9092 --topic mykafka`
+	5. 运行消费者
+	`bin/kafka-console-producer.sh --broker-list localhost:9092 --topic mykafka`
+	6. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -10,8 +10,63 @@ date: 2018-07-24 23:19:57
  虚拟机把描述类的数据从Class文件加载到内存,并对数据进行校验,转换解析和初始化,最终形成可以被虚拟机直接使用的Java类型,这就是虚拟机的类加载机制.
  <!-- more -->
 
+# 执行顺序
+1. 先父类的静态代码块,静态变量(按照源代码顺序),然后是子类的
+2. 先父类的非静态成员变量,代码块(按源代码顺序),构造方法(如果构造方法中调用了被子类覆盖的方法,调用的是子类的方法),然后子类的
+
+
+```java
+public class Apple {
+    public static int a = 1;
+    public int aa = 11;
+    public int c = 0;
+
+    public Apple(){
+        c = 2;
+    }
+
+    {
+
+        aa = 22;
+        bb = 22;
+        c = 1;
+    }
+
+    public int bb = 11;
+
+    static {
+        a = 2;
+        b = 2;
+        System.out.println("a is " + Apple.a);
+        System.out.println("b is " + Apple.b);
+    }
+
+    public static int b = 1;
+
+    public static void main(String[] args) {
+        Apple apple = new Apple();
+        System.out.println("a is " + Apple.a);
+        System.out.println("b is " + Apple.b);
+        System.out.println("aa is " + apple.aa);
+        System.out.println("bb is " + apple.bb);
+        System.out.println("c is " + apple.c);
+    }
+
+}
+/* 输出
+a is 2
+b is 2
+a is 2
+b is 1
+aa is 22
+bb is 11
+c is 2
+*/
+```
+
+
 # 类加载时机
-{% asset_img 类加载时机.png 类加载时机}
+{% asset_img 类加载时机.png 类加载时机 %}
 ## 5种必须立即对类进行初始化的情况
 加载验证准备解析都发生在初始化之前
 1. 使用new关键字实例化对象的时候,读取或设置一个类的静态字段(被final修饰,已经在编译期把结果放进常量池的静态字段除外)的时候,调用一个类的静态方法的时候
@@ -20,15 +75,92 @@ date: 2018-07-24 23:19:57
 4. 虚拟机启动的时候,会先初始化用户指定的主类
 5. 使用JDK1.7的动态语言支持时
 
+
 ## 加载
-1. 通过一个类的全限定名获取定义此类的二进制字节流。
+1. 通过一个类的全限定名获取定义此类的二进制字节流。这个时候会使用到类加载器.
 上面说获取二进制字节流，而没有明确的说明是class文件中的字节流，因为还有其它获取字节流的方式，例如从jar包中获取、从网络中获取、动态代理运行时生成等。
 2. 将这个字节流所代表的静态存储结构转换为方法区的运行时数据结构。
 3. 在内存中生成一个代表这个类的java.lang.Class对象，作为方法区这个类的各种数据结构的访问入口。
 
+### 类加载器
+1. 类加载器的分类
+	1. 启动类加载器(BootstrapClassloader)
+	加载`JAVA_HOME/lib`下的类库
+	2. 扩展类加载器(ExtensionClassloader)
+	加载`JAVA_HOME/libext`下的类库
+	3. 应用程序类加载器(ApplicationClassloader)
+	加载项目中classpath下的类文件,也被称为系统类加载器
+
+2. 双亲委派模型
+{% asset_img 双亲委派模型.png 双亲委派模型%}
+当一个类加载器加载类的时候不会马上自己去加载类,而是先尝试使用父类来加载,这种模式比较安全,可以避免某些类被重复加载.Java虚拟机建议是不要破坏这个模型。试想一下，如果我们在自己的项目中定义了一个Object类，和JDK中Object类的包同名，我们程序中使用的是JDK的，但是你的类加载器却加载了自定义的Object，那程序就乱套了，很不安全。
+
+3. 自定义类加载器
+```java
+public class MyClassLoader extends ClassLoader {
+    public MyClassLoader(ClassLoader parent) {
+        super(parent);//构造方法需要指定父类
+    }
+
+    @Override
+    protected Class<?> findClass(String name) throws ClassNotFoundException {   //重写该方法自定义加载方式
+        //加载的是classpath下的文件
+        String path = name.replace('.', File.separatorChar) + ".class";
+        System.out.println("path is " + path);
+        byte[] classData = loadClassData(path);
+        if (classData == null) {
+            throw new ClassNotFoundException();
+        }
+        return defineClass(name, classData, 0, classData.length);
+    }
+
+    private byte[] loadClassData(String name) {//读取class文件,返回字节数组
+        InputStream stream = ClassLoader.getSystemResourceAsStream(name);
+        ByteArrayOutputStream out = new ByteArrayOutputStream(1000);
+        byte[] data = new byte[1000];
+        int n;
+        try {
+            while ((n = stream.read(data)) != -1) {
+                out.write(data, 0, n);
+            }
+            return out.toByteArray();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            try {
+                out.close();
+                if (stream != null) {
+                    stream.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+    public static void main(String[] args) {
+        MyClassLoader myClassLoader = new MyClassLoader(ClassLoader.getSystemClassLoader().getParent());
+        String name = "others.Apple";
+        try {
+            Object clazz = Class.forName(name, false, myClassLoader).newInstance();
+            System.out.println(clazz);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        }
+
+    }
+}
+```
+
+
 ## 验证
 验证是连接阶段的第一步，这一阶段的目的是为了确保Class文件的字节流中包含的信息符合虚拟机的要求，并且不会危害虚拟机自身的安全。验证阶段大致会完成以下4个阶段的校验动作：文件格式验证、元数据验证、字节码验证和符号引用验证。
-1. 文件格式验证
+1. 文件格式验证(ClassFormatError)
 这一阶段目的是验证二进制字节流是否符合Class文件格式的规范，并且能被当前版本的虚拟机处理，包括以下几点:
 	* 是否以魔数（0xCAFEBABY）开头。
 	* 主次版本号是否在当前虚拟机处理范围之内。
@@ -55,14 +187,14 @@ date: 2018-07-24 23:19:57
 	* 符号引用中的类、字段、方法的访问性是否可以被当前类访问。
 
 ## 准备
-准备阶段是正式为类变量分配内存并设置初始值的阶段，这些变量所使用的内存都将在方法区分配。实例变量会在对象实例化的时候跟对象一起在java堆中分配。这里的初始值指的是通常情况下的零值。假设一个类变量的定义为:
+准备阶段是正式为**类变量**分配内存并设置初始值的阶段，这些变量所使用的内存都将在方法区分配。实例变量会在对象实例化的时候跟对象一起在java堆中分配。这里的初始值指的是通常情况下的零值。假设一个类变量的定义为:
 ```java
 public static int a = 123;
 ```
 那么变量a初始化的值是0而不是123。如果变量同时是final类型，那么准备阶段就会被赋值为123，不必等到初始化阶段再赋值。
 
 ## 解析
-解析阶段是将虚拟机常量池内的符号引用替换为直接引用的过程。解析动作主要针对类或接口、字段、类方法、接口方法、方法类型、方法句柄和调用点限定符7类符号进行。可能大家有疑问Class文件中哪有这么多内容，其实上面也说了，是针对常量池。不管是CLass文件中的方法表还是字段表，不能直接表示的内容，基本都会直接或间接存在常量池中，因此解析过程就是针对常量池中的数据类型进行解析的。
+解析阶段是将虚拟机常量池内的**符号引用**替换为**直接引用**的过程。解析动作主要针对类或接口、字段、类方法、接口方法、方法类型、方法句柄和调用点限定符7类符号进行。可能大家有疑问Class文件中哪有这么多内容，其实上面也说了，是针对常量池。不管是CLass文件中的方法表还是字段表，不能直接表示的内容，基本都会直接或间接存在常量池中，因此解析过程就是针对常量池中的数据类型进行解析的。
 1. 类或接口的解析
 要把一个从未解析过的符号引用N解析为一个类或接口的直接引用，虚拟机需要完成以下3个步骤：
 	* 如果C不是一个数组类型，那么虚拟机会把代表N的权限定名传递给D的类加载器去加载这个类C。在加载的过程当中，由于元数据、字节码验证的操作，又可能触发其它类的加载动作，一旦出险任何异常，则解析宣告失败。
@@ -87,9 +219,8 @@ public static int a = 123;
 
 ## 初始化
 类初始化是类加载过程的最后一步。前面的类加载过程中，除了加载阶段可以自定义类加载器干预之外，其余动作完全由虚拟机主导。到了初始化阶段，才真正开始执行java代码。
-我们知道，在前面的准备阶段，已经对类变量分配过内存并设置初始值。在初始化阶段，则是为类变量或其它资源设置程序中声明的值。注意这里仍然是类变量，不包括实例变量。或者明确的说，这一阶段，是执行static关键字修饰的变量或代码块。本质上，初始化是执行类构造器<client>方法的过程。
-
-><client>方法是由编译器自动收集类中所有类变量的赋值动作和静态代码块中的语句合并产生的。编译器收集的顺序是有语句在资源文件中出险的顺序所决定的。
+我们知道，在前面的准备阶段，已经对类变量分配过内存并设置初始值。在初始化阶段，则是为类变量或其它资源设置程序中声明的值。注意这里仍然是类变量，不包括实例变量。或者明确的说，这一阶段，是执行static关键字修饰的变量或代码块。本质上，初始化是执行类构造器`<client>`方法的过程。
+`<client>`方法是由编译器自动收集类中所有类变量的赋值动作和静态代码块中的语句合并产生的。编译器收集的顺序是有语句在资源文件中出险的顺序所决定的。
 ```java
 public class Client {
     private static Client client = new Client();

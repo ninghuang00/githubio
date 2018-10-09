@@ -5,21 +5,93 @@ categories:
 tags:
   - redis
   - 缓存
+  - 数据库
 date: 2018-09-09 20:04:43
 ---
  这是摘要
  <!-- more -->
 
+
+
+## redis-cli使用
+### 验证密码
+auth password
+之后就可以进行各种操作了
+
+### 查看信息
+1. 查看所有信息 
+info 
+2. 查看主从信息
+info replication
+
+### 查看配置
+1. config get *
+获取所有参数配置信息
+2. config get 参数名
+获取对应参数名的配置信息
+3. 
+
+### 参数热修改
+1. config set 参数名 参数值
+重启之后失效
+2. config rewrite
+将当前配置写入配置文件,重启之后还有效
+
+### 获取匹配正则的所有key
+keys pattern
+
+
+
 ## redis应用场景
 > 参考地址:http://blog.51cto.com/yw666/1910451
 
-1. 负载均衡中,缓存session实现session共享
+### 负载均衡中,缓存session实现session共享
 当使用负载均衡技术将用户请求分发到不同的服务器上时,就可能引起session一致性问题.
 解决方案:
-	1. 使用ip_hash技术将请求精确定位到确定的服务器,缺点就是服务器宕机,则会话丢失
-	2. 会话共享复制:在服务器之间复制共享会话,缺点就是只能在相同的中间件之间进行(比如tomcat-tomcat)
-	3. 使用cacheDB存取session信息，应用服务器接受新请求将session信息保存在cacheDB中，当应用服务器发生故障时，调度器会遍历寻找可用节点，分发请求，当应用服务器发现session不在本机内存时，则去cacheDB中查找，如果找到则复制到本机，这样实现session共享和高可用。
+1. 使用ip_hash技术将请求精确定位到确定的服务器,缺点就是服务器宕机,则会话丢失
+2. 会话共享复制:在服务器之间复制共享会话,缺点就是只能在相同的中间件之间进行(比如tomcat-tomcat)
+3. 使用cacheDB存取session信息，应用服务器接受新请求将session信息保存在cacheDB中，当应用服务器发生故障时，调度器会遍历寻找可用节点，分发请求，当应用服务器发现session不在本机内存时，则去cacheDB中查找，如果找到则复制到本机，这样实现session共享和高可用。
 {%asset_img redis实现会话缓存.png redis实现会话缓存%}	
+
+### 高可用redis服务架构分析与搭建
+>参考地址:https://www.javazhiyin.com/13533.html
+
+1. 方案
+2. 使用虚拟ip(VIP)实现易用性,client只需配置一个ip和port
+
+### 配置redis主从,配置哨兵
+如果master掉线了,sentinel会从slave中vote一个变成master,原来的master重启后,会变成slave
+1. 配置主redis,
+`docker run --name redis-master -p 6381:6381 -v $PWD/redis-master.conf:/data/redis-master.conf -d redis redis-server /data/redis-master.conf`
+2. 配置从redis,
+`docker run --name redis-slave1 -p 6382:6382 -v $PWD/redis-slave1.conf:/data/redis-slave1.conf -d redis redis-server /data/redis-slave1.conf`
+```sh 
+slaveof master_ip port
+```
+3. 配置哨兵
+`docker run --name sentinel -p 26379:26379 -v $PWD/sentinel/sentinel.conf:/data/sentinel.conf -d redis redis-sentinel /data/sentinel.conf`
+```sh
+daemonize no
+protected-mode no
+port 26379
+dir "/tmp"
+sentinel deny-scripts-reconfig yes
+#最后的1表示有几个哨兵觉得master掉线了
+sentinel monitor mymaster 120.79.202.146 6383 1
+```
+4. 注意事项
+如果主从redis都没有配置`bind`,并且`protected-mode no`,那么redis-sentinel.conf也要如此配置;如果主从redis配置了`bind ip`,并且`protected-mode yes`,那么redis-sentinel.conf也要如此配置
+
+### spring session和redis实现session共享(单点登录:SSO(single site on))
+>参考地址:https://www.javazhiyin.com/1054.html
+
+### 十亿级业务量的redis扩展方案
+>参考:https://www.javazhiyin.com/14949.html
+
+1. 根据业务优化数据结构,尽量提高使用效率
+2. 冷热数据分离,热数据放内存,冷数据放硬盘
+3. 频繁访问的冷数据使用LRU缓存进行加速
+4. 异步IO线程访问冷数据,不影响服务的整体性能
 
 ## redis内存模型
 > 参考地址:https://mp.weixin.qq.com/s?__biz=MzI4NTA1MDEwNg==&mid=2650768913&idx=1&sn=df5d7dbe8122b832d3b398f94989c61f&scene=21#wechat_redirect
@@ -94,14 +166,15 @@ typedef struct redisObject {
 		2. 整数集合
 		整数集合适用于集合所有元素都是整数且集合元素数量较小的时候，与哈希表相比，整数集合的优势在于集中存储，节省空间；同时，虽然对于元素的操作复杂度也由O(n)变为了O(1)，但由于集合数量较少，因此操作的时间并没有明显劣势。
 		只有集合中元素数量小于512且都为整数值时使用
-		结构定义:
-```c 
+		结构定义:		
+```c
 typedef struct intset{
     uint32_t encoding; //决定contents数组中的元素的类型
     uint32_t length; //元素个数
     int8_t contents[];
 } intset;
-```		
+```
+
 5. 有序集合(REDIS_ZSET)
 	1. 简介
 	有序集合与集合一样，元素都不能重复。但与集合不同的是，有序集合中的元素是有顺序的。与列表使用索引下标作为排序依据不同，有序集合为每个元素设置一个分数（score）作为排序依据。
@@ -239,7 +312,93 @@ public static void insertData(){
 数据同步阶段完成后，主从节点进入命令传播阶段。在这个阶段主节点将自己执行的写命令发送给从节点，从节点接收命令并执行，从而保证主从节点数据的一致性.此时主从节点还要维持心跳机制：PING和REPLCONF ACK。心跳机制对于主从复制的超时判断、数据安全等有作用。
 
 ## SpringBoot集成redis
+```
+<dependency>ww
+```
 
+## redis配置文件
+```sh
+bind 127.0.0.1	#指定监听的本机网卡?
+protected-mode yes	#是否开启保护模式
+port 6379	#指定端口号
+tcp-backlog 511
+# unixsocket /tmp/redis.sock
+# unixsocketperm 700
+timeout 0 #客户端超时关闭连接时间,0代表无限时间
+tcp-keepalive 300 #非0表示开启长连接,并指定发送ACKs的间隔,来探测
+daemonize no #是否后台运行
+pidfile /var/run/redis_6379.pid #指定pid文件的路径,不指定的话,默认在/var/run/redis.pid
+loglevel notice #server日志级别,有debug(开发测试环境),verbose,notice(生产环境),warning
+logfile "" #日志生成路径和文件名,设置成/dev/null可以屏蔽日志
+databases 16 #可以理解成数据库的数量,0~15
+save 900 1 #  15分钟内至少一个key发生变更,会触发snapshot,添加 save "" 屏蔽所有配置,即不进行rdb备份
+save 300 10
+save 60 10000
+
+stop-writes-on-bgsave-error yes
+rdbcompression yes #是否开启rdb文件压缩
+rdbchecksum yes #是否开启校验和
+dbfilename dump.rdb #备份文件的路径和文件名,默认在/var/lib/redis/dump.rdb
+dir ./ #指定rdb和aof文件的存放路径,只能是路径
+
+# slaveof <masterip> <masterport> #定义从redis
+# masterauth <master-password> # 连接主redis的密码
+slave-serve-stale-data yes #当前redis是slave时,当与主redis失去通信,是否继续提供服务
+slave-read-only yes #从redis只读
+slave-priority 100
+
+#
+# slave-announce-ip 5.5.5.5
+# slave-announce-port 1234
+
+# requirepass foobared #设置密码,设置成""就是没有密码
+# maxclients 10000 #最大客户端连接数量
+# maxmemory <bytes> #设置最大缓存大小,超过后会先清理内存,然后还不行,接下来只接受读请求,拒绝写请求
+
+#
+# volatile-lru -> 根据lru移除设置了过期时间的key
+# allkeys-lru -> 根据lru移除所有的
+# volatile-lfu -> 根据lfu移除设置过期时间的
+# allkeys-lfu -> 根据lfu移除所有的
+# volatile-random -> 随机移除设置了过期时间的
+# allkeys-random -> 随机移除任何的
+# volatile-ttl -> 移除即将过期的
+# noeviction -> 不移除,返回写错误
+#
+# maxmemory-policy noeviction
+
+lazyfree-lazy-eviction no
+lazyfree-lazy-expire no
+lazyfree-lazy-server-del no
+slave-lazy-flush no
+
+appendonly no #是否开启aof持久化模式,默认不开启
+appendfilename "appendonly.aof" #aof持久化备份文件名
+# 三种策略
+# no: don't fsync, just let the OS flush the data when it wants. Faster.
+# always: fsync after every write to the append only log. Slow, Safest.
+# everysec: fsync only one time every second. Compromise.
+#
+appendfsync everysec #定义写操作备份到硬盘的频率
+no-appendfsync-on-rewrite no #是否在重写aof文件的时候关闭aof文件的命令追加同步,因为重写子线程和追加主线程可能会冲突引起阻塞
+auto-aof-rewrite-percentage 100 #当aof文件超过多少百分比(和最近一次重写后的aof文件大小比较)进行重写,设置为0可以关闭重写功能,
+auto-aof-rewrite-min-size 64mb #指定需要重写的最小aof文件大小
+aof-load-truncated yes
+aof-use-rdb-preamble no
+
+
+# cluster-enabled yes
+# cluster-config-file nodes-6379.conf
+# cluster-node-timeout 15000
+# cluster-slave-validity-factor 10
+# cluster-migration-barrier 1
+# cluster-require-full-coverage yes
+# cluster-slave-no-failover no
+# cluster-announce-ip 10.1.1.5
+# cluster-announce-port 6379
+# cluster-announce-bus-port 6380
+
+```
 
 
 

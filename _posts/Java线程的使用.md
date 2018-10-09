@@ -38,7 +38,7 @@ date: 2018-07-23 21:46:03
     2. -Xmx()最大堆栈大小,
     3. -Xss()单个线程堆栈
 4. 线程的状态
-{% asset_img 线程的状态.jpg 线程的状态%}
+{% asset_img 线程的状态.png 线程的状态%}
     1. 新生状态（New）： 
     当一个线程的实例被创建即使用new关键字和Thread类或其子类创建一个线程对象后，此时该线程处于新生(new)状态，处于新生状态的线程有自己的内存空间，但该线程并没有运行，此时线程还不是活着的（not alive）；
     2. 就绪状态（Runnable）： 
@@ -215,6 +215,40 @@ public void run() {
 互斥同步对性能最大的影响就是对阻塞的实现,挂起和恢复线程的操作需要切换到内核态中完成
     1. synchronized
     关键是要分清楚是给类加锁还是给对象实例加锁
+        1. 对象锁
+            * 同步方法
+            当多个线程访问同一个对象的同步方法时,需要同步执行,但是可以访问该对象的其他非同步方法
+```java
+synchronized T methodName(){
+//do smoething
+}
+```
+            * 锁定临界对象
+            锁定的是object对象
+```java
+public class SynchronizedDemo<T> {
+    Object object = new Object();
+
+    T methodName(){
+        synchronized(object){        //do something
+        }
+    }
+}
+```
+            * 锁定当前对象
+            相当于同步方法
+```java
+T methodName(){
+    synchronized(this){
+    //do something
+    }
+}
+```
+            * 同步代码块
+            只是锁住方法中的部分代码
+        2. 类锁(同步静态方法)
+        也就是锁住Class对象
+
     2. java.util.concurrent.ReentrantLock(注意锁的声明要放在需要同步的方法的外面)
     和synchronized基本用法类似,使用lock()和unlock()方法配合try/finally语句块来完成,但是有以下三个特色:
         1. 等待可中断

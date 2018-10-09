@@ -19,20 +19,29 @@ https://www.jianshu.com/p/e694f1e868ec
 1. 1.8中的实现
 {% asset_img ConcurrentHashMap1.8.png ConcurrentHashMap1.8%}
 使用Node+CAS+synchronized实现
+
 sizeCtl是控制标识符，不同的值表示不同的意义。
->负数代表正在进行初始化或扩容操作 ,其中-1代表正在初始化 ,-N 表示有N-1个线程正在进行扩容操作
-正数或0代表hash表还没有被初始化，这个数值表示初始化或下一次进行扩容的大小，类似于扩容阈值。它的值始终是当前ConcurrentHashMap容量的0.75倍，这与loadfactor是对应的。实际容量>=sizeCtl，则扩容。
-	1. put的实现大致流程
-		1. 检查key/value是否为空，如果为空，则抛异常，否则进行2
-		2. 进入for死循环，进行3
-		3. 检查table是否初始化了，如果没有，则调用initTable()进行初始化然后进行 2，否则进行4
-		4. 根据key的hash值计算出其应该在table中储存的位置i，取出table[i]的节点用f表示。
-    	根据f的不同有如下三种情况：
-    		1. 如果table[i]==null(即该位置的节点为空，没有发生碰撞)，则利用CAS操作直接存储在该位置，如果CAS操作成功则退出死循环。
-            2. 如果table[i]!=null(即该位置已经有其它节点，发生碰撞)，碰撞处理也有两种情况
-	            1. 检查table[i]的节点的hash是否等于MOVED，如果等于，则检测到正在扩容，则帮助其扩容
-	            2. 说明table[i]的节点的hash值不等于MOVED，如果table[i]为链表节点，则将此节点插入链表中即可如果table[i]为树节点，则将此节点插入树中即可。插入成功后，进行 5
-		5. 如果table[i]的节点是链表节点，则检查table的第i个位置的链表是否需要转化为数，如果需要则调用treeifyBin函数进行转化
+> * 负数代表正在进行初始化或扩容操作 ,其中-1代表正在初始化 ,-N 表示有N-1个线程正在进行扩容操作
+* 正数或0代表hash表还没有被初始化，这个数值表示初始化或下一次进行扩容的大小，类似于扩容阈值。它的值始终是当前ConcurrentHashMap容量的0.75倍，这与loadfactor是对应的。实际容量>=sizeCtl，则扩容。
+
+2. put的实现大致流程
+    1. 检查key/value是否为空，如果为空，则抛异常，否则进行2
+    为什么不支持key/value为null
+        1. 如果支持value为null,并发状态下,通过get(key)获取的value如果是null,则无法判断map中是没有这个key,还是key对应的value就是null;如果是单线程则可以用containsKey()判断
+    2. 进入for死循环(直到插入成功)，进行3
+    3. 检查table是否初始化了，如果没有，则调用initTable()进行初始化然后进行 2，否则进行4
+    4. 根据key的hash值计算出其应该在table中储存的位置i，取出table[i]的节点用f表示。
+    根据f的不同有如下三种情况：
+    	1. 如果table[i]==null(即该位置的节点为空，没有发生碰撞)
+        则利用CAS操作直接存储在该位置，插入空桶不用加锁,如果CAS操作成功则退出死循环。
+        2. 如果table[i]!=null(即该位置已经有其它节点，发生碰撞)
+            1. 检查table[i]的节点的hash是否等于MOVED，如果等于，则检测到正在扩容，则帮助其扩容
+            2. 说明table[i]的节点的hash值不等于MOVED，
+                synchronized(f),然后判断f==table[i]
+                1. 如果table[i]为链表节点，更新成功后,break
+                2. 如果table[i]为树节点，更新成功后,break
+                插入成功后，进行 5
+    5. 如果table[i]的节点是链表节点，则检查table的第i个位置的链表是否需要转化为红黑树，如果需要则调用treeifyBin函数进行转化
 
 
 
@@ -42,6 +51,10 @@ sizeCtl是控制标识符，不同的值表示不同的意义。
 
 ## ReentrantLock
 1. 锁的实现:
+参考地址:https://www.jianshu.com/p/fe027772e156
+ReentrantLock基于`volatile int state`和cas实现,尝试获得锁的时候会判断state的值,
+    1. 如果是0的话,使用cas算法修改state加1
+    2. 不是0的话说明锁已经被占用,使用cas加1,进入等待队列
 ReentrantLock是JDK实现的,synchronized是依赖于JVM实现的
 2. 性能的区别:
 JDK1.6之后(synchronized引入了偏向锁,轻量级锁(自旋锁)之后)synchronized优化的与ReentrantLock性能差不多,在两种方法都可以使用的情况下官方建议使用synchronized,都是试图在用户态就将加锁问题解决,避免进入内核态
@@ -204,14 +217,23 @@ class SafeSeq {
 ## CAS算法
 参考地址:https://www.jianshu.com/p/21be831e851e
 Compare and Swap，即比较再交换。就是java中一种乐观锁机制,实际上是一种无锁算法
+1. 基本原理
 {% asset_img cas原理.png cas原理%}
 因为t1和t2线程都同时去访问同一变量56，所以他们会把主内存的值完全拷贝一份到自己的工作内存空间，所以t1和t2线程的预期值都为56。
 假设t1在与t2线程竞争中线程t1能去更新变量的值，而其他线程都失败。（失败的线程并不会被挂起，而是被告知这次竞争中失败，并可以再次发起尝试）。t1线程去更新变量值改为57，然后写到内存中。此时对于t2来说，内存值变为了57，与预期值56不一致，就操作失败了（想改的值不再是原来的值）。
 CPU去更新一个值，但如果想改的值不再是原来的值，操作就失败，因为很明显，有其它操作先改变了这个值。
+2. ABA问题
+比如一个栈中有a,b,c三个元素,现在栈顶是a,
+    1. 在cas模式下,线程1打算将栈顶变成b,
+    2. 这时候线程2将a,b弹出,再将a压入,
+    3. 线程1发现栈顶还是a,就将栈顶变成了b
+那么此时栈里面只剩下b一个元素,丢失了c
 
 ## Executors工具类
+>参考地址:https://zhuanlan.zhihu.com/p/32867181
+
 1. 重载实现的newFixedThreadPool()
-创建一个可重用固定线程数的线程池，超出的线程会在队列中等待。
+创建一个可重用固定线程数的线程池，超出的线程会在队列中等待。因为阻塞队列无界,要慎用,避免OOM
 ```java
 public static ExecutorService newFixedThreadPool(int nThreads) {
         return new ThreadPoolExecutor(nThreads, nThreads,
@@ -221,7 +243,7 @@ public static ExecutorService newFixedThreadPool(int nThreads) {
     }
 ```
 2. 重载实现的newCachedThreadPool()
-创建一个可缓存线程池，如果执行新任务时没有空闲的线程，新建线程执行任务；否则调用空闲线程执行新任务。对于执行很多短期异步任务的程序而言，这些线程池通常可提高程序性能。
+创建一个可缓存线程池，如果执行新任务时没有空闲的线程，新建线程执行任务；否则调用空闲线程执行新任务。对于执行很多短期异步任务的程序而言，比较合适任务的提交速度小于任务的处理速度的场景,不然很容易OOM
 ```java
     public static ExecutorService newCachedThreadPool() {
         return new ThreadPoolExecutor(0, Integer.MAX_VALUE,

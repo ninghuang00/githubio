@@ -145,6 +145,11 @@ Git 并不保存这些前后变化的差异数据。实际上，Git 更像是把
 2. 对修改的文件进行快照,然后存到版本库的暂存区(index目录)
 3. 提交更新后,将暂存区的文件快照永久保存到objects目录
 
+>参考地址:https://juejin.im/post/5af26c4d5188256728605809
+
+{% asset_img git工作区域.png %}
+{% asset_img git文件生命周期.png %}
+
 
 ### `.git`目录结构
 {% asset_img 目录结构.png 目录结构%}

@@ -205,19 +205,19 @@ Parallel Scavenge收集器除了会显而易见地提供可以精确控制吞吐
 	2. 在JDK 1.6中才开始提供的
 	在此之前，如果新生代选择了Parallel Scavenge收集器，老年代除了Serial Old以外别无选择，所以在Parallel Old诞生以后，“吞吐量优先”收集器终于有了比较名副其实的应用组合，在注重吞吐量以及CPU资源敏感的场合，都可以优先考虑Parallel Scavenge加Parallel Old收集器。Parallel Old收集器的工作流程与Parallel Scavenge相同
 Parallel Scavenge/Parallel Old收集器配合使用的流程图：
-{% asset_img ParallelScavenge/ParallelOld收集器配合使用流程图.png ParallelScavenge/ParallelOld收集器配合使用流程图%}
+{% asset_img ParallelScavengeParallelOld收集器配合使用流程图.png ParallelScavenge/ParallelOld收集器配合使用流程图%}
 
 3. CMS收集器(Concurrent Mark Sweep)
 	1. 是一种**以获取最短回收停顿时间为目标**的收集器，它非常符合那些集中在互联网站或者B/S系统的服务端上的Java应用，这些应用都非常重视服务的响应速度。
 	2. **从名字上（“Mark Sweep”）就可以看出它是基于“标记-清除”算法实现的。**
-CMS收集器工作的整个流程分为以下4个步骤：
-	1. 初始标记（CMS initial mark）：
-	仅仅只是标记一下GC Roots能直接关联到的对象，速度很快，需要“Stop The World”。
-	2. 并发标记（CMS concurrent mark）：
-	进行GC Roots Tracing的过程，在整个过程中耗时最长。
-	3. 重新标记（CMS remark）：
-	为了修正并发标记期间因用户程序继续运作而导致标记产生变动的那一部分对象的标记记录，这个阶段的停顿时间一般会比初始标记阶段稍长一些，但远比并发标记的时间短。此阶段也需要“Stop The World”。
-	4. 并发清除（CMS concurrent sweep）
+	CMS收集器工作的整个流程分为以下4个步骤：
+		1. 初始标记（CMS initial mark）：
+		仅仅只是标记一下GC Roots能直接关联到的对象，速度很快，需要“Stop The World”。
+		2. 并发标记（CMS concurrent mark）：
+		进行GC Roots Tracing的过程，在整个过程中耗时最长,查找初始标记中找到的对象相关联的存活对象
+		3. 重新标记（CMS remark）：
+		为了修正并发标记期间因用户程序继续运作而导致标记产生变动的那一部分对象的标记记录，这个阶段的停顿时间一般会比初始标记阶段稍长一些，但远比并发标记的时间短。此阶段也需要“Stop The World”。
+		4. 并发清除（CMS concurrent sweep）
 由于整个过程中耗时最长的并发标记和并发清除过程收集器线程都可以与用户线程一起工作，所以，从总体上来说，CMS收集器的内存回收过程是与用户线程一起并发执行的。通过下图可以比较清楚地看到CMS收集器的运作步骤中并发和需要停顿的时间:
 {% asset_img CMS收集器流程.png CMS收集器流程 %}
 优点:并发收集、低停顿
@@ -239,21 +239,30 @@ CMS收集器工作的整个流程分为以下4个步骤：
 		* 可预测的停顿 
 		这是G1相对CMS的一大优势，降低停顿时间是G1和CMS共同的关注点，但G1除了降低停顿外，还能建立可预测的停顿时间模型，能让使用者明确指定在一个长度为M毫秒的时间片段内，消耗在GC上的时间不得超过N毫秒，这几乎已经是实时Java（RTSJ）的垃圾收集器的特征了。
 	2. 横跨整个堆内存
-	在G1之前的其他收集器进行收集的范围都是整个新生代或者老生代，而G1不再是这样。G1在使用时，Java堆的内存布局与其他收集器有很大区别，它将整个Java堆划分为多个大小相等的独立区域（Region），虽然还保留新生代和老年代的概念，但新生代和老年代不再是物理隔离的了，而都是一部分Region（不需要连续）的集合。
+	在G1之前的其他收集器进行收集的范围都是整个新生代或者老生代，而G1不再是这样。G1在使用时，Java堆的内存布局与其他收集器有很大区别，它将整个Java堆划分为多个大小相等的独立区域（Region），虽然还保留新生代和老年代的概念，但新生代和老年代不再是物理隔离的了，而都是一部分Region（不需要连续）的集合。每个region被标记成E,S,O,H,其中H代表Humongous,用来分配 大对象(当对象实例大小超过Region大小的一半)
+{% asset_img G1回收器的内存划分.png G1回收器的内存划分%}
 	3. 建立可预测的时间模型
 	G1收集器之所以能建立可预测的停顿时间模型，是因为它可以有计划地避免在整个Java堆中进行全区域的垃圾收集。G1跟踪各个Region里面的垃圾堆积的价值大小（回收所获得的空间大小以及回收所需时间的经验值），在后台维护一个优先列表，每次根据允许的收集时间，优先回收价值最大的Region（这也就是Garbage-First名称的来由）。这种使用Region划分内存空间以及有优先级的区域回收方式，保证了G1收集器在有限的时间内可以获取尽可能高的收集效率。
 	4. 避免全堆扫描——Remembered Set 
 	G1把Java堆分为多个Region，就是“化整为零”。但是Region不可能是孤立的，一个对象分配在某个Region中，可以与整个Java堆任意的对象发生引用关系。在做可达性分析确定对象是否存活的时候，需要扫描整个Java堆才能保证准确性，这显然是对GC效率的极大伤害。
 	为了避免全堆扫描的发生，虚拟机为G1中每个Region维护了一个与之对应的Remembered Set。虚拟机发现程序在对Reference类型的数据进行写操作时，会产生一个Write Barrier暂时中断写操作，检查Reference引用的对象是否处于不同的Region之中（在分代的例子中就是检查是否老年代中的对象引用了新生代中的对象），如果是，便通过CardTable把相关引用信息记录到被引用对象所属的Region的Remembered Set之中。当进行内存回收时，在GC根节点的枚举范围中加入Remembered Set即可保证不对全堆扫描也不会有遗漏。
-如果不计算维护Remembered Set的操作，G1收集器的运作大致可划分为以下几个步骤：
-	* 初始标记（Initial Marking） 
-	仅仅只是标记一下GC Roots 能直接关联到的对象，并且修改TAMS（Nest Top Mark Start）的值，让下一阶段用户程序并发运行时，能在正确可以的Region中创建对象，此阶段需要停顿线程，但耗时很短。
-	* 并发标记（Concurrent Marking） 
-	从GC Root 开始对堆中对象进行可达性分析，找到存活对象，此阶段耗时较长，但可与用户程序并发执行。
-	* 最终标记（Final Marking） 
-	为了修正在并发标记期间因用户程序继续运作而导致标记产生变动的那一部分标记记录，虚拟机将这段时间对象变化记录在线程的Remembered Set Logs里面，最终标记阶段需要把Remembered Set Logs的数据合并到Remembered Set中，这阶段需要停顿线程，但是可并行执行。
-	* 筛选回收（Live Data Counting and Evacuation） 
-	首先对各个Region中的回收价值和成本进行排序，根据用户所期望的GC 停顿是时间来制定回收计划。此阶段其实也可以做到与用户程序一起并发执行，但是因为只回收一部分Region，时间是用户可控制的，而且停顿用户线程将大幅度提高收集效率。
+	5. GC的类型
+		* young gc 
+		当所有的eden region填满,会回收存活对象到survivor region,
+		* mixed gc 
+		当young region到了一定的比例,会回收整个young region以及部分的old region 
+		* full gc 
+		当mixed gc来不及,导致old region被填满,则会触发,就是serial old的单线程回收,要尽量避免
+	6. G1收集器运作的步骤
+	如果不计算维护Remembered Set的操作，G1收集器的运作大致可划分为以下几个步骤：
+		* 初始标记（Initial Marking） 
+		仅仅只是标记一下GC Roots 能直接关联到的对象，并且修改TAMS（Nest Top Mark Start）的值，让下一阶段用户程序并发运行时，能在正确可以的Region中创建对象，此阶段需要停顿线程，但耗时很短。
+		* 并发标记（Concurrent Marking） 
+		从GC Root 开始对堆中对象进行可达性分析，找到存活对象，此阶段耗时较长，但可与用户程序并发执行。
+		* 最终标记（Final Marking） 
+		为了修正在并发标记期间因用户程序继续运作而导致标记产生变动的那一部分标记记录，虚拟机将这段时间对象变化记录在线程的Remembered Set Logs里面，最终标记阶段需要把Remembered Set Logs的数据合并到Remembered Set中，这阶段需要停顿线程，但是可并行执行。
+		* 筛选回收（Live Data Counting and Evacuation） 
+		首先对各个Region中的回收价值和成本进行排序，根据用户所期望的GC 停顿是时间来制定回收计划。此阶段其实也可以做到与用户程序一起并发执行，但是因为只回收一部分Region，时间是用户可控制的，而且停顿用户线程将大幅度提高收集效率。
 通过下图可以比较清楚地看到G1收集器的运作步骤中并发和需要停顿的阶段（Safepoint处）：
 {% asset_img G1收集器流程.png G1收集器 %}
 
