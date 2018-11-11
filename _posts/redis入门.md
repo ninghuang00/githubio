@@ -94,7 +94,8 @@ sentinel monitor mymaster 120.79.202.146 6383 1
 4. 异步IO线程访问冷数据,不影响服务的整体性能
 
 ## redis内存模型
-> 参考地址:https://mp.weixin.qq.com/s?__biz=MzI4NTA1MDEwNg==&mid=2650768913&idx=1&sn=df5d7dbe8122b832d3b398f94989c61f&scene=21#wechat_redirect
+> 参考地址:
+https://mp.weixin.qq.com/s?__biz=MzI4NTA1MDEwNg==&mid=2650768913&idx=1&sn=df5d7dbe8122b832d3b398f94989c61f&scene=21#wechat_redirect
 
 下图是执行`set hello word`涉及的数据模型
 {% asset_img 数据模型.png 数据模型%}
@@ -310,6 +311,10 @@ public static void insertData(){
 
 3. 命令传播阶段
 数据同步阶段完成后，主从节点进入命令传播阶段。在这个阶段主节点将自己执行的写命令发送给从节点，从节点接收命令并执行，从而保证主从节点数据的一致性.此时主从节点还要维持心跳机制：PING和REPLCONF ACK。心跳机制对于主从复制的超时判断、数据安全等有作用。
+
+## 所谓的单线程
+> 参考地址:https://blog.csdn.net/xlgen157387/article/details/79470556
+
 
 ## SpringBoot集成redis
 ```

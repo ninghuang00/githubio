@@ -16,6 +16,34 @@ date: 2018-08-07 23:35:40
 
 
 
+## 配置文件配置解析
+* `<context:component-scan base-package="com.*" >`
+扫描相关包,以实现注解进行依赖注入
+
+* `<context:include-filter`
+可以配置新的注解,让spring也可以扫描到
+```
+<context:component-scan base-package="com.fq">
+    <context:include-filter type="annotation"
+        expression="org.springframework.stereotype.Controller" />
+    <context:exclude-filter type="annotation"
+        expression="org.springframework.stereotype.Service" />
+</context:component-scan>
+```
+
+* `<task:annotation-driven/>`
+配置定时自动任务,配置之后可以使用`@Scheduled(cron = "*/5 * * * * ?")//每隔5秒执行一次`配置定时任务
+
+* `<aop:aspectj-autoproxy/>`
+声明自动为spring容器中那些配置@AspectJ切面的bean创建代理，织入切面。
+有一个proxy-target-class属性，默认为false，表示使用jdk动态代理织入增强，当配为`<aop:aspectj-autoproxy  
+poxy-target-class="true"/>`时，表示使用CGLib动态代理技术织入增强。不过即使proxy-target-class设置为false，如果目标类没有声明接口，则spring将自动使用CGLib动态代理。 
+
+* `<mvc:resources mapping="*.html" location="/" />`
+mapping:表示需要匹配的路径
+location:映射到静态资源的位置
+
+
 ## spring框架的基本原理
 >基本原理其实就是通过反射(反射的原理)解析类及其类的各种信息，包括构造器、方法及其参数，属性。然后将其封装成bean定义信息类、constructor信息类、method信息类、property信息类，最终放在一个map里，也就是所谓的container，池等等，其实就是个map。。汗。。。。当你写好配置文件，启动项目后，框架会先按照你的配置文件找到那个要scan的包(一般是哪些包?)，然后解析包里面的所有类，找到所有含有@bean，@service等注解的类，利用反射解析它们，包括解析构造器，方法，属性等等，然后封装成各种信息类放到一个map里。**每当你需要一个bean的时候，框架就会从container找是不是有这个类的定义啊？如果找到则通过构造器new出来（这就是控制反转，不用你new,框架帮你new）**，再在这个类找是不是有要注入的属性或者方法，**比如标有@autowired的属性，如果有则还是到container找对应的解析类，new出对象，并通过之前解析出来的信息类找到setter方法，然后用该方法注入对象（这就是依赖注入）**。如果其中有一个类container里没找到，则抛出异常，比如常见的spring无法找到该类定义，无法wire的异常。还有就是嵌套bean则用了一下递归，container会放到servletcontext里面，每次reQuest从servletcontext找这个container即可，不用多次解析类定义。如果bean的scope是singleton，则会重用这个bean不再重新创建，将这个bean放到一个map里，每次用都先从这个map里面找。如果scope是session，则该bean会放到session里面。仅此而已，没必要花更多精力。
 
@@ -94,9 +122,13 @@ public class BeanFactory {
 
 ## 依赖注入()
 就是通过反射bean的setter方法,set成员bean的过程
+{% post_link 反射 %}
+
 ## 控制反转(IOC)
 就是通过配置文件+反射生成bean
+
 ## 切面编程(AOP)
+{% post_link 代理模式 %}
 ```java
 <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -237,32 +269,7 @@ RequestMapping注解有六个属性，下面我们把她分成三类进行说明
 使用在返回实例的方法上
 
 
-## SpringBoot
-### 常用配置
-1. 默认扫描位置
-  * springboot默认扫描`@SpringBootApplication`入口类所在路径,同级目录包及其子包
-  * 也可以使用注解`@ComponentScan(basePackages={"com.hn"})`指定扫描路径
-2. 配置日志
 
-### 配置优先级
-Spring Boot 所提供的配置优先级顺序比较复杂。按照优先级从高到低的顺序:
-1. 命令行参数。
-2. 通过 System.getProperties() 获取的 Java 系统参数。
-3. 操作系统环境变量。
-4. 从 java:comp/env 得到的 JNDI 属性。
-5. 通过 RandomValuePropertySource 生成的1random.*1属性。
-6. 应用 Jar 文件之外的属性文件。
-7. 应用 Jar 文件内部的属性文件。
-8. 在应用配置 Java 类（包含@Configuration注解的 Java 类）中通过@PropertySource注解声明的属性文件。
-9. 通过SpringApplication.setDefaultProperties声明的默认属性。
-SpringBoot的这个配置优先级看似复杂，其实是很合理的。比如命令行参数的优先级被设置为最高。这样的好处是可以在测试或生产环境中快速地修改配置参数值，而不需要重新打包和部署应用。
-
-
-> 参考地址https://www.javazhiyin.com/16381.html
-
-3. 配置mybatis
-  1. 添加mybatis和mysql驱动依赖
-  2. 配置文件中添加数据库参数
 
 
 ## Bean的实例化过程

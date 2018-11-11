@@ -250,6 +250,7 @@ T methodName(){
         也就是锁住Class对象
 
     2. java.util.concurrent.ReentrantLock(注意锁的声明要放在需要同步的方法的外面)
+{% post_link concurrent包常用类 %}    
     和synchronized基本用法类似,使用lock()和unlock()方法配合try/finally语句块来完成,但是有以下三个特色:
         1. 等待可中断
         2. 可实现公平锁
@@ -296,9 +297,29 @@ public class VectorDemo {
     }
 }
 ```
+# 通信
+> 参考地址:https://blog.csdn.net/mine_song/article/details/70231830
 
+## 进程间通信
+1. 管道(pipe)
+允许一个两个具有公共祖先进程的进程之间进行通信
+2. 命名管道(named pipe)
+克服了管道没有名字的限制,并且允许没有亲缘关系的管道之间进行通信,在文件系统中有对应的文件名
+2. 信号量(semophore)
+主要作为不同进程,或者是统一进程不同线程之间的同步手段
+3. 消息队列(message)
+有权限的进程可以往队列中写数据,有读取权限的进程可以从队列中读数据,克服了管道只能承载无格式字节流,信息量小,缓冲区大小受限的问题
+4. 信号 (signal)
+用于通知进程某个事件的发生
+5. 共享内存
+多进程访问同一块共享内存
+6. 套接字(socket)
+可用于不同机器之间的进程通信
 
-## 线程进程之间的访问
+## 线程间通信
+1. 共享变量
+2. 管道流(PipeOutputStream等)
+
 1. 临界区(Critical Section)
 适合一个进程内的多线程访问公共区域或代码段时使用。
 2. 互斥量(Mutex)

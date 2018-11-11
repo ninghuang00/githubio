@@ -10,6 +10,132 @@ date: 2018-07-07 19:51:55
  <!-- more -->
 
 # java基础 +++
+
+## 关于String的引用
+```java 
+public static void main(String[] args) {
+    String x = new String("ab");
+    //String x = "ab";
+    change(x);
+    System.out.println(x);//输出ab
+}
+ 
+public static void change(String x) {
+    x = "cd";
+} 
+```
+解释:
+1. x保存的是"ab"的地址,x的有自己的地址
+2. change(String x)方法中的x也有自己的地址,和1中的x不同,但是他们保存的引用地址相同,只不过方法中将这个引用地址的值换成了"cd"的地址
+3. 而1中的x中保存的引用地址不变
+{% asset_img 值传递.jpeg %}
+
+
+```c 
+void change(string &x) {
+    x = "cd";
+}
+ 
+int main(){
+    string x = "ab";
+    change(x);
+    cout << x << endl;//输出cd
+}
+```
+解释:这里的`&x`直接将变量x的地址传递,而不是传递x保存的地址引用
+{% asset_img 引用传递.jpeg %}
+
+```java 
+class Apple {
+    String name;
+
+    public Apple(String name) {
+        this.name = name;
+    }
+
+    public static void main(String[] args) {
+        Apple apple = new Apple("6s");
+        change(apple);
+        System.out.println(apple.name);//输出xr
+
+    }
+
+    public static void change(Apple apple) {
+        apple.name = "xr";
+        //apple = new Apple("xr");//如果是这样输出的还是6s
+    }
+}  
+```
+
+## Integer.valueOf 
+>参考地址:https://blog.csdn.net/wangshihui512/article/details/50960720
+
+```java 
+Integer i01=59; //调用了Integer.valueOf()方法,返回新的Integer对象
+int i02=59;//基本类型存在栈中
+Integer i03=Integer.valueOf(59);//直接返回引用
+Integer i04=new Integer(59);//返回新对象
+System.out.println(i01==i02);//true 比较的是值
+System.out.println(i01==i03);//true 比较的是引用,如果值大于127,或者小于-128,会是false
+System.out.println(i01==i04);//false
+System.out.println(i02==i02);//true
+```
+
+```java 
+public static Integer valueOf(int i) {
+    if (i >= IntegerCache.low && i <= IntegerCache.high)
+        return IntegerCache.cache[i + (-IntegerCache.low)];
+    return new Integer(i);
+} 
+```
+
+## 读写文件
+```java 
+public void read() {
+    BufferedInputStream inputStream = null;
+    String path = "/Users/huangning/Desktop/temp/haha";
+    int len;
+    try {
+        inputStream = new BufferedInputStream(new FileInputStream(new File(path)));
+        byte[] buffer = new byte[1024];
+        while((len = inputStream.read(buffer)) !=- 1){
+            System.out.println(new String(buffer, 0, len));
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }finally {
+        try {
+            if (inputStream != null) {
+                inputStream.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+public void write() {
+    BufferedOutputStream outputStream = null;
+    try {
+        outputStream = new BufferedOutputStream(new FileOutputStream(new File("/Users/huangning/Desktop/temp/haha")));
+        String content = "just try it";
+        outputStream.write(content.getBytes());
+    } catch (IOException e) {
+        e.printStackTrace();
+    }finally {
+        if (outputStream != null) {
+            try {
+                outputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+```
+
+
+
 ## 面向对象
 
 ## 常用类及数据结构
@@ -88,6 +214,19 @@ public class AVLTree<T extends Comparable<T>> {
 
 ---
 ## 泛型
+```java
+/** 参数T
+ * 第一个:占位符,表示这个T是一个泛型,提示编译器要注意
+ * 第二个:表示要返回T类型的数据
+ * 第三个:表示限制参数类型为T
+ */
+private <T> T getListFisrt(List<T> data) {
+        if (data == null || data.size() == 0) {
+            return null;
+        }
+        return data.get(0);
+    }
+```
 ### 注意点
 1. 泛型方法和泛型类的<>互不相干
 2. 泛型擦除如果泛型参数没有指定上限(如<T extends String>),那类型擦除之后T就被替换成Object,否则就是上限,如String

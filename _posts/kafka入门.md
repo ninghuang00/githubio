@@ -11,6 +11,61 @@ date: 2018-08-26 09:34:24
  <!-- more -->
 
 
+## kafka相关操作
+> 参考地址:https://kafka.apache.org/quickstart
+
+1. 启动zookeeper,kafka压缩包中自带的
+`bin/zookeeper-server-start.sh config/zookeeper.properties`
+
+2. 启动kafka server,可以在配置文件中适当修改JVM的启动参数
+`bin/kafka-server-start.sh config/server.properties`
+
+3. 创建一个topic
+`bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic test`
+查看创建的topic
+`bin/kafka-topics.sh --list --zookeeper localhost:2181`
+
+4. 启动一个producer,发送消息
+`bin/kafka-console-producer.sh --broker-list localhost:9092 --topic test`
+
+5. 启动一个consumer消费消息
+`bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic test --from-beginning`
+
+6. 使用集群
+	1. 复制server.properties到server-1.properties和server-2.properties 
+	2. 修改参数
+```
+broker.id=1
+listeners=PLAINTEXT://:9093
+log.dirs=/tmp/kafka-logs-1 
+```
+	3. 使用新的配置启动
+	4. 创建replication-factor为3的topic
+	`bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 3 --partitions 1 --topic my-replicated-topic`
+	参数解释:
+	`--replication-factor 3`的意思是将任意一个broker的topic复制到另外两个broker上,
+	`--partitions 1`的意思是每个topic下创建一个分区
+	5. 查看topic的描述
+	`bin/kafka-topics.sh --describe --zookeeper localhost:2181 --topic my-replicated-topic`
+	6. kill leader的进程之后,会切换新的leader,原来打开的producer和consumer可以继续使用
+
+## zookeeper为kafka提供的服务
+### 配置同步
+1. kafka使用zookeeper来保存一些meta信息,并利用zookeeper的watch机制来监视meta信息的变更并作出相应的动作
+2. broker node registry:当kafka的broker启动之后,会向zookeeper注册自己的节点信息(临时节点znode),在broker和zookeeper断开的时候删除znode
+3. broker topic register:当broker启动后,会向zookeeper注册自己的topic和partition
+4. consumer和consumer group:保证一个consumer group中consumer可以交错的消费同一个topic中所有partitions,并且为了性能,将partitions尽量均衡地分散到每个consumer上
+
+### 状态同步
+1. consumer保存消费信息的offset在zookeeper上
+2. partition的leader(host:port)注册在zookeeper中,producer作为zookeeper的client,注册了watch来监视partition leader的变更事件
+3. zookeeper支持kafka的partition的leader和follower的协同与选举,保证partition中只要leader和follower中有一个正常,服务就不会中断
+
+### 总结
+1. producer端使用zookeeper来"发现"broker列表,以及和topic下的每个partition leader建立socket连接并发送消息
+2. broker端使用zookeeper来注册broker信息,以及检测partition leader的存活性
+3. consumer端使用zookeeper来注册consumer信息,其中包括consumer消费的partition列表等,同时也用来发现broker列表,并和partition leader建立连接,来获取消息
+
 ## 入门教程
 入门搭建使用参考地址:https://blog.csdn.net/csolo/article/details/52389646
 

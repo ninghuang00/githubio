@@ -19,6 +19,8 @@ date: 2018-09-02 10:23:52
 
 # sql语法
 ## 嵌套查询
+> 参考地址:https://my.oschina.net/startphp/blog/123337
+
 ```sql
 #查询“001”课程比“002”课程成绩高的所有学生的学号；
 Select a.Sno 
@@ -28,17 +30,6 @@ from
 Where a.Sno=b.Sno and a.score>b.score;
 ```
 
-```
-参考地址:https://my.oschina.net/startphp/blog/123337
-```
-
-```sql
-
-```
-
-```sql
-
-```
 
 
 
@@ -73,8 +64,9 @@ GROUP BY Websites.name;
 {% asset_img groupby2.png %}
 
 * having
-在 SQL 中增加 HAVING 子句原因是，WHERE 关键字无法与聚合函数一起使用。
+1. 在 SQL 中增加 HAVING 子句原因是，WHERE 关键字无法与聚合函数一起使用。where是先于聚合语句执行的,
 HAVING 子句可以让我们筛选分组后的各组数据。
+2. 而聚合语句是先于having执行的
 ```sql 
 # 查找总访问量大于 200 的网站。
 SELECT Websites.name, Websites.url, SUM(access_log.count) AS nums 
@@ -96,6 +88,20 @@ GROUP BY Websites.name
 HAVING SUM(access_log.count) > 200;
 ```
 {% asset_img having2.png %}
+
+* where和having的区别
+1. 找出部门平均薪资大于3000的
+```java
+select deparment, avg(salary) as average from salary_info 
+group by deparment having average > 3000
+```
+2. 统计每个部门中薪资大于3000的人数
+```java
+select deparment, count(*) as c from salary_info 
+where salary > 3000 group by deparment
+
+```
+
 
 ## 基础语法
 * distinct
