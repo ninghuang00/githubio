@@ -20,6 +20,8 @@ date: 2018-08-18 09:46:59
 3. commit和merge技巧
 建议一个commit只修改一个问题,这样如果想在多个分支之间同步一个修改,
 只需要用`git cherry-pick commitId`就可以完成
+4. 使用https clone项目之后每次pull,push代码都要输入密码的解决办法(好像没用)
+`git config --global credential.helper store`
 
 ### 回退
 1. 回退单个文件
