@@ -15,6 +15,34 @@ date: 2018-08-18 09:46:59
 >参考地址:https://blog.csdn.net/zjf280441589/article/details/53044308/
 
 ## maven打包命令
+### 打包跳过测试
+1. `mvn clean package -Dmaven.test.skip=true`
+
+2. 在pom.xml文件中配置
+```
+<plugin>  
+    <groupId>org.apache.maven.plugin</groupId>  
+    <artifactId>maven-compiler-plugin</artifactId>  
+    <version>2.1</version>  
+    <configuration>  
+        <skip>true</skip>  
+    </configuration>  
+</plugin>  
+<plugin>  
+    <groupId>org.apache.maven.plugins</groupId>  
+    <artifactId>maven-surefire-plugin</artifactId>  
+    <version>2.5</version>  
+    <configuration>  
+        <skip>true</skip>  
+    </configuration>  
+</plugin> 
+
+```
+
+**使用以上两种方式,不但跳过单元测试的运行，也跳过测试代码的编译。**
+3. `mvn clean package -DskipTests`
+只是跳过测试,但是还是会编译测试代码
+
 ### 多模块打包,单独打包一个模块
 ```
 -pl, --projects

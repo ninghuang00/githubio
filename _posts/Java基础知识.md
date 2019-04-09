@@ -11,6 +11,162 @@ date: 2018-07-07 19:51:55
 
 # java基础 +++
 
+## 注解
+> 参考地址:https://blog.csdn.net/javazejian/article/details/71860633
+
+1. 注解定义
+```
+//注解String类型的字段
+@Target(ElementType.FIELD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface SQLString {
+    //对应数据库表的列名
+    String name() default "";
+    //列类型分配的长度，如varchar(30)的30
+    int value() default 0;
+    //嵌套注解
+    Constraints constraint() default @Constraints;
+}
+
+
+//约束注解
+@Target(ElementType.FIELD)//只能应用在字段上
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Constraints {
+    //判断是否作为主键约束
+    boolean primaryKey() default false;
+    //判断是否允许为null
+    boolean allowNull() default false;
+    //判断是否唯一
+    boolean unique() default false;
+}
+
+
+```
+注解中方法可以看成是注解的属性值,在使用注解的时候传入,等到注解处理器中可以根据注解属性的不同值做不同的处理
+2. 注解使用
+```
+@DBTable(name = "MEMBER")
+public class Member {
+    //主键ID
+    @SQLString(name = "ID",value = 50, constraint = @Constraints(primaryKey = true))
+    private String id;
+
+    @SQLString(name = "NAME" , value = 30)
+    private String name;
+
+    @SQLInteger(name = "AGE")
+    private int age;
+
+    @SQLString(name = "DESCRIPTION" ,value = 150 , constraint = @Constraints(allowNull = true))
+    private String description;//个人描述
+}
+```
+在使用注解的时候,根据注解的属性传入相应的值.
+3. 注解处理器
+```
+public class TableCreator {
+  public static String createTableSql(String className) throws ClassNotFoundException {
+    Class<?> cl = Class.forName(className);
+    DBTable dbTable = cl.getAnnotation(DBTable.class);
+    //如果没有表注解，直接返回
+    if(dbTable == null) {
+      System.out.println(
+              "No DBTable annotations in class " + className);
+      return null;
+    }
+    String tableName = dbTable.name();
+    // If the name is empty, use the Class name:
+    if(tableName.length() < 1)
+      tableName = cl.getName().toUpperCase();
+    List<String> columnDefs = new ArrayList<String>();
+    //通过Class类API获取到所有成员字段
+    for(Field field : cl.getDeclaredFields()) {
+      String columnName = null;
+      //获取字段上的注解
+      Annotation[] anns = field.getDeclaredAnnotations();
+      if(anns.length < 1)
+        continue; // Not a db table column
+
+      //判断注解类型
+      if(anns[0] instanceof SQLInteger) {
+        SQLInteger sInt = (SQLInteger) anns[0];
+        //获取字段对应列名称，如果没有就是使用字段名称替代
+        if(sInt.name().length() < 1)
+          columnName = field.getName().toUpperCase();
+        else
+          columnName = sInt.name();
+        //构建语句
+        columnDefs.add(columnName + " INT" +
+                getConstraints(sInt.constraint()));
+      }
+      ...
+    }
+}
+
+```
+注解处理器的基本原理就是通过反射机制,获取类,字段,方法上的注解,然后根据不同的注解信息作出不同的处理,实际编写自定义注解的时候需要继承AbstractProcessor类,然后重写里头几个重要的方法,最后还需要注册到META-INF/services/javax.annotation.processing.Processor文件(自己创建)中.
+```
+init():对一些工具进行初始化。
+process():就是真正生成java代码的地方。
+getSupportedAnnotationTypes():表示该注解处理器可以出来那些注解。
+getSupportedSourceVersion():可以出来java版本
+```
+
+
+## 文件读写
+### 文件IO
+
+```java 
+public void read() {
+    BufferedInputStream inputStream = null;
+    String path = "/Users/huangning/Desktop/temp/haha";
+    int len;
+    try {
+        inputStream = new BufferedInputStream(new FileInputStream(new File(path)));
+        byte[] buffer = new byte[1024];
+        while((len = inputStream.read(buffer)) !=- 1){
+            System.out.println(new String(buffer, 0, len));
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }finally {
+        try {
+            if (inputStream != null) {
+                inputStream.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+public void write() {
+    BufferedOutputStream outputStream = null;
+    try {
+        outputStream = new BufferedOutputStream(new FileOutputStream(new File("/Users/huangning/Desktop/temp/haha")));
+        String content = "just try it";
+        outputStream.write(content.getBytes());
+    } catch (IOException e) {
+        e.printStackTrace();
+    }finally {
+        if (outputStream != null) {
+            try {
+                outputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+```
+
+### 读取classpath下的配置文件
+```java 
+Yaml yaml = new Yaml();
+Map map = (Map) yaml.load(APIRequest.class.getClassLoader().getResourceAsStream("application.yml"));
+```
+
 ## 关于String的引用
 ```java 
 public static void main(String[] args) {
@@ -88,53 +244,6 @@ public static Integer valueOf(int i) {
     return new Integer(i);
 } 
 ```
-
-## 读写文件
-```java 
-public void read() {
-    BufferedInputStream inputStream = null;
-    String path = "/Users/huangning/Desktop/temp/haha";
-    int len;
-    try {
-        inputStream = new BufferedInputStream(new FileInputStream(new File(path)));
-        byte[] buffer = new byte[1024];
-        while((len = inputStream.read(buffer)) !=- 1){
-            System.out.println(new String(buffer, 0, len));
-        }
-    } catch (IOException e) {
-        e.printStackTrace();
-    }finally {
-        try {
-            if (inputStream != null) {
-                inputStream.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-}
-
-public void write() {
-    BufferedOutputStream outputStream = null;
-    try {
-        outputStream = new BufferedOutputStream(new FileOutputStream(new File("/Users/huangning/Desktop/temp/haha")));
-        String content = "just try it";
-        outputStream.write(content.getBytes());
-    } catch (IOException e) {
-        e.printStackTrace();
-    }finally {
-        if (outputStream != null) {
-            try {
-                outputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-}
-```
-
-
 
 ## 面向对象
 

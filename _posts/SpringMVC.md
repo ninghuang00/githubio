@@ -229,6 +229,116 @@ public class AnnotationTest {
 }
 ```
 
+### SpringMVC中使用注解实现权限控制
+1. 定义注解
+```java
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.PARAMETER})//目标是方法参数
+@Documented
+@Inherited
+public @interface RequestToken {
+    boolean fetchUser() default false;
+    boolean fetchOrg() default false;
+    RoleType[] role() default RoleType.ALL_PERMISSION;
+}
+```
+2. 定义角色类型
+```java
+public enum RoleType {
+
+    ALL_PERMISSION(0, "所有登录用户"),
+    ADMIN(1, "管理员"),
+
+    private int code;
+    private String status;
+
+    RoleType(int code, String status) {
+        this.code = code;
+        this.status = status;
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+}
+```
+3. 实现HandlerMethodArgumentResolver接口,定义方法参数解析器
+```java
+@Component
+@Order(3)
+public class RequestTokenArgumentResolver implements HandlerMethodArgumentResolver {
+    @Autowired
+    private TokenFactory tokenFactory;
+
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+        return parameter.getParameterType().isAssignableFrom(Token.class)
+                && parameter.hasParameterAnnotation(RequestToken.class);
+    }
+
+    @Override
+    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+
+        RequestToken requestToken = parameter.getParameterAnnotation(RequestToken.class);//获取参数注解
+        String jwtStr = webRequest.getHeader(BaseConstant.X_ACCESS_TOKEN);//获取token字符串
+        //HttpServletResponse response = webRequest.getNativeResponse(HttpServletResponse.class);
+        Token token = tokenFactory.verifyJwt(jwtStr,requestToken);//解析并验证token字符串中的角色信息,并返回token对象
+        return token;
+    }
+}
+```
+4. 权限验证
+```java
+public Token verifyJwt(String jwtStr, RequestToken requestToken) throws TokenException {
+        if (StringUtils.isEmpty(jwtStr)) {
+            String errMsg = "jwt为空";
+            log.info(errMsg);
+            throw new TokenException(errMsg);
+        }
+
+        String tokenStr = getTokenStrWithoutSig(jwtStr);
+
+        Token token = TokenUtil.decryptToken(tokenStr);
+
+        if (ObjectUtils.isEmpty(token)) {
+            String errMsg = "token为空";
+            log.info(errMsg);
+            throw new TokenException(errMsg);
+        }
+
+        log.info("token解析结果：" + token);
+
+        // 判断token中的角色与注解中的权限是否一致
+        for (RoleType role : requestToken.role()) {
+            if (role.getCode() == RoleType.ALL_PERMISSION.getCode() || token.getRoleCode() == role.getCode()) {
+                break;
+            } else {
+                String errMsg = "token角色无法调用该接口";
+                log.info(errMsg);
+                throw new TokenException(errMsg);
+            }
+        }
+}
+```
+4. 在Controller中使用注解
+```java
+@ApiOperation(value = "生产基地批次列表", notes = "生产基地列表")
+@GetMapping("/production/list")
+BaseResult plist (
+        @ApiIgnore @RequestToken(role = {RoleType.ADMIN,RoleType.PRODUCTION}) Token token,
+        @ApiParam(value = "批次号") @RequestParam(value = "num", required = false) String num,
+        @ApiParam(value = "当前页数",required = true) @RequestParam(value = "page",defaultValue = "1") int page,
+        @ApiParam(value = "页面大小",required = true) @RequestParam(value = "pageSize",defaultValue = "10") int pageSize
+) {
+    return BaseResultFactory.produceEmptyResult(Code.SUCCESS);
+}
+```
+
+
 ### SpringMVC中的常用注解
 > 参考地址:https://www.javazhiyin.com/12491.html
 

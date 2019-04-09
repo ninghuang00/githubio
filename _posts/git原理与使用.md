@@ -90,6 +90,8 @@ date: 2018-08-18 09:46:59
          `git merge master`
     5. 推送更新到gitlab，使gitlab同步更新显示
        　 `git push origin dev-minw`
+    或者远程没有这个分支的时候
+    `git push origin local_branch:remote_branch`
 3. 创建分支
     1. 基于远程分支创建本地分支
     `git checkout -b dev-local origin/dev-remote`

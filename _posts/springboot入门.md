@@ -13,6 +13,7 @@ date: 2018-11-06 11:27:51
 
 
 ## 常用注解配置
+### springboot
 * 默认扫描位置
   * springboot默认扫描`@SpringBootApplication`入口类所在路径,同级目录包及其子包
   * 也可以使用注解`@ComponentScan(basePackages={"com.hn"})`指定扫描路径
@@ -57,6 +58,22 @@ SpringBoot的这个配置优先级看似复杂，其实是很合理的。比如�
 
 > 参考地址https://www.javazhiyin.com/16381.html
 
-## 配置mybatis
+### 配置mybatis
   1. 添加mybatis和mysql驱动依赖
   2. 配置文件中添加数据库参数
+
+
+### Junit注解
+* `@Before`,`@After`
+会在每个有`@Test`注解的方法运行之前/之后运行一遍(有几个测试方法就运行几遍)
+
+* `@BeforeClass`,`@AfterClass`
+会在所有的测试方法运行前/后执行一遍(总共就一遍),使用该注解的方法应该是`public static void`并且无参
+
+* `@Ignore`
+
+
+
+
+
+

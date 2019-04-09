@@ -10,7 +10,32 @@ date: 2018-07-07 20:49:09
  这是摘要
  <!-- more -->
  
-# shell脚本
+# shell脚
+
+## 查看了linux内核版本
+1. `cat /proc/version`
+2. `uname -a`
+3. `cat /etc/issue`
+
+## 创建符号链接
+`ln -s apache-maven-3.0 maven`
+配置环境变量的时候就可以使用maven,之后如果升级了maven,删除这个符号链接
+`rm maven`
+然后创建新的符号链接
+`ln -s apache-maven-3.5 maven`
+这样可以方便的在不同版本之间切换,无需修改环境变量配置
+
+
+## mac下环境变量配置的位置
+Mac系统的环境变量，加载顺序为：
+`/etc/profile /etc/paths ~/.bash_profile ~/.bash_login ~/.profile ~/.bashrc`
+`/etc/profile`和`/etc/paths`是系统级别的，系统启动就会加载，后面几个是当前用户级的环境变量。后面3个按照从前往后的顺序读取，如果`/.bash_profile`文件存在，则后面的几个文件就会被忽略不读了，如果`/.bash_profile`文件不存在，才会以此类推读取后面的文件。`~/.bashrc`没有上述规则，它是bash shell打开的时候载入的。
+添加path的语法
+```
+#中间用冒号隔开
+export PATH=$PATH:<PATH 1>:<PATH 2>:<PATH 3>:------:<PATH N>
+```
+`source ./.bash_profile` 或者 `./.profile` 环境信息生效
 
 ## nohup
 使进程在后台运行
@@ -54,6 +79,7 @@ done
 ## 匹配数字
 1. 匹配`1~1000`
 `^([1-9][0-9]{0,3}|1000)$`
+
 
 
 # centos常用命令
@@ -351,4 +377,47 @@ export CATALINA_HOME=/usr/local/tomcat
 ```
 
 6. 在/etc/rc.d/rc.local中加入`/usr/local/tomcat/bin/startup.sh`
+
+## Ubuntu常用命令
+1. 切换图形界面	
+	1. 图形桌面--->命令行模式：Ctrl+Alt+F1/F2/F3/F4/F5/F6
+	2. 命令行模式--->图形桌面：Ctrl+Alt+F7
+	3. 解除命令行模式锁定光标快捷键：Ctrl+Alt
+
+2. scp命令,上传文件到远程主机
+	* 对拷文件夹 (包括文件夹本身)
+		`scp -r   /home/wwwroot/www/charts/util root@192.168.1.65:/home/wwwroot/limesurvey_back/scp`
+	* 对拷文件夹下所有文件 (不包括文件夹本身)
+		`scp   /home/wwwroot/www/charts/util/* root@192.168.1.65:/home/wwwroot/limesurvey_back/scp`
+	* 对拷文件并重命名
+		`
+		scp   /home/wwwroot/www/charts/util/a.txt root@192.168.1.65:/home/wwwroot/limesurvey_back/scp/b.text
+		`
+	* 下载文件到当前文件夹 `scp root@10.82.82.248:/usr/local/tomcat/bin/startup.sh ./`
+3. 查看tomcat是否启动
+	`
+	ps -ef|grep java
+	`
+4. 解压文件到指定目录：
+	`
+	tar -zxvf /home/zjx/aa.tar.gz -C /home/zjx/pf
+	`
+5. 修改root密码
+	`
+	sudo passwd root
+	`
+6. 创建子账户
+
+7. 后台运行java程序
+`
+nohup java -jar bwhcrawler.jar &
+`
+执行命令会显示进程号,使用kill可以关闭
+
+8. 查看端口占用情况
+`
+netstat -apn | grep 3306
+或者
+ps -aux | grep tomcat
+`	
 
