@@ -17,7 +17,6 @@ date: 2018-07-23 21:46:03
 在过去没有线程的操作系统中，资源的分配和执行都是由进程完成的。随着技术的发展，为了减少由于进程切换带来的开销，提升并发能力，操作系统中引入线程。把原本属于进程的工作一分为二，进程还是负责资源的分配，而线程负责执行。
 也就是说，**进程是资源分配的基本单位，而线程是调度的基本单位。**
 2. 线程和进程的区别
-参考地址:http://www.ruanyifeng.com/blog/2013/04/processes_and_threads.html
     1. 单个CPU同一时刻只能运行一个进程,其他进程处于非运行状态
     2. 一个进程可以包括多个线程,共享进程的内存,还有自己的内存空间(线程栈),
     JVM以及程序和可执行文件,class文件等是一个静态的概念,JVM实例以及进程和线程是一个动态的概念.
@@ -31,6 +30,8 @@ date: 2018-07-23 21:46:03
     3. 通信方式
         1. 进程之间:socket,信号,管道,消息,共享内存
         2. 线程之间:共享内存,管道
+
+> 参考地址:http://www.ruanyifeng.com/blog/2013/04/processes_and_threads.html
 
 3. 系统可以启动的线程数量限制
 不考虑系统本身的限制,主要和以下JVM启动参数有关
@@ -69,51 +70,51 @@ date: 2018-07-23 21:46:03
         3. 线程sleep()时**不会失去拥有的对象锁**。 作用：保持对象锁，让出CPU，调用目的是不让当前线程独自霸占该进程所获取的CPU资源，以留一定的时间给其他线程执行的机会； 
         4. sleep(0)的作用是立刻进行一次CPU竞争,让其他线程有机会执行
     4. thread.join() throws InterruptedException,可以有时间参数
-    ```java 
-    public static void main(String[] args) {
-        Thread thread0 = new Thread(()->{
-            for (int i = 0; i < 3; i++) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+```
+public static void main(String[] args) {
+    Thread thread0 = new Thread(()->{
+        for (int i = 0; i < 3; i++) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        });
-        thread0.start();
-        try {
-            thread0.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        }
+    });
+    thread0.start();
+    try {
+        thread0.join();
+    } catch (InterruptedException e) {
+        e.printStackTrace();
+    }
+}
+```
+```
+public final synchronized void join(long millis)
+    throws InterruptedException {
+        long base = System.currentTimeMillis();
+        long now = 0;
+
+        if (millis < 0) {
+            throw new IllegalArgumentException("timeout value is negative");
+        }
+
+        if (millis == 0) {
+            while (isAlive()) {
+                wait(0);    //wait()方法其实调用的就是wait(0)
+            }
+        } else {
+            while (isAlive()) {
+                long delay = millis - now;
+                if (delay <= 0) {
+                    break;
+                }
+                wait(delay);
+                now = System.currentTimeMillis() - base;
+            }
         }
     }
-    ```
-    ```java 
-    public final synchronized void join(long millis)
-        throws InterruptedException {
-            long base = System.currentTimeMillis();
-            long now = 0;
-
-            if (millis < 0) {
-                throw new IllegalArgumentException("timeout value is negative");
-            }
-
-            if (millis == 0) {
-                while (isAlive()) {
-                    wait(0);    //wait()方法其实调用的就是wait(0)
-                }
-            } else {
-                while (isAlive()) {
-                    long delay = millis - now;
-                    if (delay <= 0) {
-                        break;
-                    }
-                    wait(delay);
-                    now = System.currentTimeMillis() - base;
-                }
-            }
-        }
-    ```
+```
         1. 比如在main()方法中调用了thread0.join()方法,那么main线程会阻塞,等到thread0执行完之后再执行后面的代码
         2. join()方法实际上基于wait()方法实现,join()方法中会调用join(0)方法,join(0)方法(是一个同步方法)中调用了wait(0)方法,main线程先获得thread0的对象锁,然后发现thread0还活着,于是释放锁,并进入等待直到thread0结束(至于结束后怎么通知?)
         3. 可以设置等待时间
@@ -225,7 +226,7 @@ synchronized T methodName(){
 ```
             * 锁定临界对象
             锁定的是object对象
-```java
+```
 public class SynchronizedDemo<T> {
     Object object = new Object();
 
@@ -267,7 +268,7 @@ T methodName(){
 ### 线程安全是相对的
 (深入理解Java虚拟机P390)
 比如说Vector是一个线程安全的集合容器,因为它的add(),get(),size(),remove()方法都是被synchronized修饰过的,但是并不意味着调用这些方法就永远不需要额外的同步手段了,一下代码就有可能会出现ArrayIndexOutOfBoundsException.
-```java
+```c
 public class VectorDemo {
     private static Vector<Integer> vector = new Vector();
     public static void main(String[] args) {
@@ -297,10 +298,10 @@ public class VectorDemo {
     }
 }
 ```
-# 通信
+## 通信
 > 参考地址:https://blog.csdn.net/mine_song/article/details/70231830
 
-## 进程间通信
+### 进程间通信
 1. 管道(pipe)
 允许一个两个具有公共祖先进程的进程之间进行通信
 2. 命名管道(named pipe)
@@ -316,7 +317,96 @@ public class VectorDemo {
 6. 套接字(socket)
 可用于不同机器之间的进程通信
 
-## 线程间通信
+#### 信号量的使用
+一个资源有多个副本可供同时使用，比如打印机房有多个打印机、厕所有多个坑可供同时使用，这种情况下，Java提供了另外的并发访问控制--资源的多副本的并发访问控制，
+1. 原理
+Semaphore是用来保护一个或者多个共享资源的访问，Semaphore内部维护了一个计数器，其值为可以访问的共享资源的个数。
+一个线程要访问共享资源，先获得信号量，如果信号量的计数器值大于1，意味着有共享资源可以访问，则使其计数器值减去1，再访问共享资源。
+如果计数器值为0,线程进入休眠。当某个线程使用完共享资源后，释放信号量，并将信号量内部的计数器加1，之前进入休眠的线程将被唤醒并再次试图获得信号量。
+
+2. 使用
+```
+public class ResourceManage {  
+    private final Semaphore semaphore ;  
+    private boolean resourceArray[];  
+    private final ReentrantLock lock;  
+    public ResourceManage() {  
+        this.resourceArray = new boolean[10];//存放厕所状态  
+        this.semaphore = new Semaphore(10,true);//控制10个共享资源的使用，使用先进先出的公平模式进行共享;公平模式的信号量，先来的先获得信号量  
+        this.lock = new ReentrantLock(true);//公平模式的锁，先来的先选  
+        for(int i=0 ;i<10; i++){  
+            resourceArray[i] = true;//初始化为资源可用的情况  
+        }  
+    }  
+    public void useResource(int userId){ 
+//      semaphore.acquire(); 
+        try{  
+            semaphore.acquire();  
+            int id = getResourceId();//占到一个坑  
+            System.out.print("userId:"+userId+"正在使用资源，资源id:"+id+"\n");  
+            Thread.sleep(100);//do something，相当于于使用资源  
+            resourceArray[id] = true;//退出这个坑  
+        }catch (InterruptedException e){  
+            e.printStackTrace();  
+        }finally {  
+            semaphore.release();//释放信号量，计数器加1  
+        }  
+    }  
+    private int getResourceId(){  
+        int id = -1; 
+        lock.lock();
+        try {  
+            //lock.lock();//虽然使用了锁控制同步，但由于只是简单的一个数组遍历，效率还是很高的，所以基本不影响性能。  
+            for(int i=0; i<10; i++){  
+                if(resourceArray[i]){  
+                    resourceArray[i] = false;  
+                    id = i;  
+                    break;  
+                }  
+            }  
+        }catch (Exception e){  
+            e.printStackTrace();  
+        }finally {  
+            lock.unlock();  
+        }  
+        return id;  
+    }  
+}  
+```
+```
+public class ResourceUser implements Runnable{  
+    private ResourceManage resourceManage;  
+    private int userId;  
+    public ResourceUser(ResourceManage resourceManage, int userId) {  
+        this.resourceManage = resourceManage;  
+        this.userId = userId;  
+    }  
+    public void run(){  
+        System.out.print("userId:"+userId+"准备使用资源...\n");  
+        resourceManage.useResource(userId);  
+        System.out.print("userId:"+userId+"使用资源完毕...\n");  
+    }  
+  
+    public static void main(String[] args){  
+        ResourceManage resourceManage = new ResourceManage();  
+        Thread[] threads = new Thread[100];  
+        for (int i = 0; i < 100; i++) {  
+            Thread thread = new Thread(new ResourceUser(resourceManage,i));//创建多个资源使用者  
+            threads[i] = thread;  
+        }  
+        for(int i = 0; i < 100; i++){  
+            Thread thread = threads[i];  
+            try {  
+                thread.start();//启动线程  
+            }catch (Exception e){  
+                e.printStackTrace();  
+            }  
+        }  
+    }  
+}
+```
+
+### 线程间通信
 1. 共享变量
 2. 管道流(PipeOutputStream等)
 
@@ -328,3 +418,11 @@ public class VectorDemo {
 通过线程间触发事件实现同步互斥。
 4. 信号量(Semaphore)
 与临界区和互斥量不同，可以实现多个线程同时访问公共区域数据，原理与操作系统中PV操作类似，先设置一个访问公共区域的线程最大连接数，每有一个线程访问共享区资源数就减一，直到资源数小于等于零
+
+
+## Future的使用
+>参考地址:https://www.cnblogs.com/cz123/p/7693064.html
+
+
+
+

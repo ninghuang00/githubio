@@ -10,6 +10,7 @@ date: 2019-04-08 11:06:13
 idea破解补丁使用指南
 
 1. 从网站下载最新的破解补丁,并放置到idea安装路径的`/bin`文件夹下
+
 > 下载地址:http://idea.lanyus.com/
 
 2. 修改`/bin`文件夹下的`idea.vmoptions`文件,在最后一行加入`-javaagent:../bin/JetbrainsIdesCrack-4.2.jar`

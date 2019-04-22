@@ -62,7 +62,7 @@ synchronized的使用比较简洁,由编译器保证加锁和施放锁,而Reentr
 	3. ReentrantLock提供了一个可以中断等待锁的机制,通过lock.lockInterruptibly()来实现这个机制
 	4. Lock实现了可轮询锁,使用if(lock.tryLock())可以尝试获得锁,如果获取不到则else
 4. 使用方法
-```java
+```
 class SafeSeqWithLock{  
     private long count = 0;  
     private ReentrantLock lock = new ReentrantLock();  
@@ -86,7 +86,7 @@ class SafeSeqWithLock{
 https://blog.csdn.net/u011486491/article/details/77849326
 
 生产者消费者模型:
-```java
+```
 public class ProductQueue<T> {
     private final T[] items;
     private final Lock lock = new ReentrantLock();
@@ -159,7 +159,7 @@ public class ProductQueue<T> {
 线程安全的并且无阻塞的类
 1. AtomicLong
 在多线程操作的时候不需要额外的同步处理
-```java
+```
 public class AtomicTest {
 
     public void testAtomic() {
